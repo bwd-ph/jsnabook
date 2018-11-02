@@ -1,0 +1,95 @@
+p.caption {
+  color: #777;
+  margin-top: 10px;
+}
+p code {
+  white-space: inherit;
+}
+pre {
+  word-break: normal;
+  word-wrap: normal;
+}
+pre code {
+  white-space: inherit;
+}
+.papers {
+  padding: 1em 1em 1em 5em;
+  margin-bottom: 10px;
+  background: #f5f5f5 5px center/4em no-repeat;
+}
+.papers {
+  background-image: url("Assets/papers.png");
+}
+.greybox {
+  padding: 1em 1em 1em 1em;
+  margin-bottom: 10px;
+  background: #f5f5f5;
+}
+.fruit {
+  padding: 1em 5em 0 0;
+  background-image: url("Assets/fruit.png");
+  background-position: right center;
+  background-repeat: no-repeat;
+  background-size: 4em;
+}
+.scales {
+  padding: 1em 5em 0 0;
+  background-image: url("Assets/scales.png");
+  background-position: right center;
+  background-repeat: no-repeat;
+  background-size: 4em;
+}
+.healthyweight {
+  padding: 1em 8em 0 0;
+  background-image: url("Assets/healthyweight.png");
+  background-position: right center;
+  background-repeat: no-repeat;
+  background-size: 6em;
+}
+.weavers {
+  padding: 1em 8em 0 0;
+  background-image: url("Assets/weavers.png");
+  background-position: right center;
+  background-repeat: no-repeat;
+  background-size: 8em;
+}
+.TFL {
+  background-image: url("Assets/TFL.png");
+  background-position: right top;
+  background-repeat: no-repeat;
+  background-size: 9em;
+}
+.everybody {
+  padding: 1em 8em 0 0;
+  background-image: url("Assets/everybody.png");
+  background-position: right center;
+  background-repeat: no-repeat;
+  background-size: 8em;
+}
+.timetochange {
+  background-image: url("Assets/timetochange.png");
+  background-position: right top;
+  background-repeat: no-repeat;
+  background-size: 9em;
+}
+.sanctuary {
+  padding: 1em 8em 0 0;
+  background-image: url("Assets/sanctuary.png");
+  background-position: right bottom;
+  background-repeat: no-repeat;
+  background-size: 6em;
+}
+.falls {
+  padding: 1em 12em 0 0;
+  background-image: url("Assets/falls.png");
+  background-position: right center;
+  background-repeat: no-repeat;
+  background-size: 10em;
+}
+.dementiafriend {
+  padding: 1em 12em 0 0;
+  background-image: url("Assets/dementiafriend.png");
+  background-position: right bottom;
+  background-repeat: no-repeat;
+  background-size: 10em;
+}

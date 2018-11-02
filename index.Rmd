@@ -1,0 +1,29 @@
+--- 
+site: bookdown::bookdown_site
+output: bookdown::gitbook
+documentclass: book
+bibliography: [book.bib, packages.bib]
+biblio-style: apalike
+cover-image: Assets/frontlogo.png
+link-citations: yes
+github-repo: rstudio/bookdown-demo
+description: "This is a minimal example of using the bookdown package to write a book. The output format for this example is bookdown::gitbook."
+---
+
+# Introduction {#intro}
+
+![](Assets/frontlogo.png)
+
+&nbsp;
+
+
+Department of Health guidance _[@DH2013]_ describes the central importance in the modernised health and care system of an enhanced Joint Strategic Needs Assessment (JSNA), which should consider all the current and future health and social care needs of the area. The local authority and CCG should be guided by the JSNA when developing their Joint Health and Wellbeing Strategy.
+
+This document presents many of the key messages from Blackburn with Darwen’s JSNA. It begins with a profile of the borough’s population and local economy (‘Setting the Scene’), and is then arranged under the same three themes as the borough’s Joint Health and Wellbeing Strategy itself: ‘Start Well’, ‘Live Well’ and ‘Age Well’.
+
+```{r include=FALSE}
+# automatically create a bib database for R packages
+knitr::write_bib(c(
+  .packages(), 'bookdown', 'knitr', 'rmarkdown'
+), 'packages.bib')
+```
