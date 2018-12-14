@@ -20,6 +20,12 @@ pre code {
 .papers {
   background-image: url("Assets/papers.png");
 }
+.newstuff {
+  padding: 1em 1em 1em 5em;
+  margin-bottom: 5px;
+  background: #f5f5f5 5px center/3em no-repeat;
+  background-image: url("Assets/sparkling.png");
+}
 .greybox {
   padding: 1em 1em 1em 1em;
   margin-bottom: 10px;

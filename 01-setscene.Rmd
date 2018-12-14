@@ -149,14 +149,76 @@ knitr::include_graphics("Assets/p8fig16.png")
 ```
 
 #### Claimant Count
+```{block2, type = 'newstuff'}
+This section contains updated material 
+&nbsp;
+<div style="text-align: right;font-size:80%;"><em>[‘Sparkling’](https://thenounproject.com/term/sparkling/1200272) icon by Morten Halvorsen from [The Noun Project](https://thenounproject.com)</em></div>
+```
 It is obvious from Figure \@ref(fig:unempchart) that it would be useful to have a proxy for the official unemployment count, which does not depend on a survey. For many years, that need was met by the Claimant Count. Since the introduction of Universal Credit, however, things have not been quite so simple.
 
-The Claimant Count now consists of the (diminishing) number of people still on Job Seekers Allowance, plus those claiming Universal Credit _who are required to seek work_ _[@HCL_unemp]_.  It is available on this basis going back to April 2015 (Figure \@ref(fig:claimcountchart)). The latest Claimant Count total for the borough (in August 2018) was 3575. As a percentage of the working-age population (not just the economically active), this gives a rate of 3.9%.
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.align='center'}
+# Want all dates from April 2015 (= 32244) to latest. Found out that April 2015 was '32244' by doing https://www.nomisweb.co.uk/api/v01/dataset/nm_1_1.overview.xml
+nomisurl <- 'http://www.nomisweb.co.uk/api/v01/dataset/NM_162_1.data.csv?geography=1870659597,2092957699,2013265922&date=32244-latest&gender=0&age=0&measure=1,2&measures=20100&select=date_name,date_sortorder,geography_name,measure_name,obs_value'
+
+nomisdata <- read.csv(file=nomisurl, header=TRUE,sep = ",")
+
+# put DATE_NAME in chronological order
+nomisdata$DATE_NAME <- factor(nomisdata$DATE_NAME,levels=unique(nomisdata$DATE_NAME[order(nomisdata$DATE_SORTORDER)]),ordered=TRUE)
+
+# substitute snappier measure names
+nomisdata$MEASURE_NAME <- as.character(nomisdata$MEASURE_NAME)
+nomisdata <- within(nomisdata,{
+  MEASURE_NAME[MEASURE_NAME == "Claimants as a proportion of residents aged 16-64"] <- "rate"
+  MEASURE_NAME[MEASURE_NAME == "Claimant count"] <- "count"
+})
+
+nomisdata <- cast(nomisdata,DATE_NAME+DATE_SORTORDER+GEOGRAPHY_NAME~MEASURE_NAME) # Now has 'count' and 'rate' as separate columns
+
+bwdLatest <- nomisdata[which(nomisdata$DATE_SORTORDER == max(nomisdata$DATE_SORTORDER) & nomisdata$GEOGRAPHY_NAME == "Blackburn with Darwen"),]
+bwdLatestCount <- bwdLatest$count
+bwdLatestRate <- bwdLatest$rate
+latestDate <- bwdLatest$DATE_NAME
+nomisdata$geogAbb <- ifelse(nomisdata$GEOGRAPHY_NAME == 'Blackburn with Darwen','BwD',as.character(nomisdata$GEOGRAPHY_NAME))
+```
+The Claimant Count now consists of the (diminishing) number of people still on Job Seekers Allowance, plus those claiming Universal Credit _who are required to seek work_ _[@HCL_unemp]_.  It is available on this basis going back to April 2015 (Figure \@ref(fig:claimcountchart)). The latest Claimant Count total for the borough (in `r latestDate`) was `r bwdLatestCount`. As a percentage of the working-age population (not just the economically active), this gives a rate of `r bwdLatestRate`%.
 
 (ref:claimcountcap) Claimant Count as a % of residents aged 16-64 _[@Nomis]_
 
-```{r claimcountchart, fig.cap='(ref:claimcountcap)', echo = FALSE, out.width = '60%', fig.align='center'}
-knitr::include_graphics("Assets/p8fig17.png")
+```{r claimcountchart, fig.cap='(ref:claimcountcap)', echo = FALSE, warning = FALSE, message = FALSE, fig.align='center'}
+#knitr::include_graphics("Assets/p8fig17.png")
+
+pal <- c("red","blue","green")
+pal <- setNames(pal,c("North West","BwD","England"))
+
+xx <- list(
+  title = ""
+)
+yx <- list(
+  title = "",
+  ticksuffix = "%"
+)
+
+m <- list(
+  l = 50,
+  r = 50,
+  b = 120,
+  t = 60,
+  pad = 4
+)
+
+p <- nomisdata %>%
+  group_by(geogAbb) %>%
+  plot_ly(x = ~DATE_NAME,y = ~rate,color = ~ geogAbb) %>%
+  add_lines(text = ~ paste(DATE_NAME,"<br />",
+                          "Rate: <b>",rate,'%</b>',
+                          ifelse(geogAbb == "BwD",paste0("<br /><em>(",count," people)</b>"),"")),
+            colors = pal,
+            hoverinfo = "text+name") %>%
+  layout(xaxis = xx, yaxis = yx, margin = m,
+         legend = list(x = 0.1, y = 0.9)
+         )
+
+p
 ```
 
 ##### Impact of Universal Credit 'Full Service'
