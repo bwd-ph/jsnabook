@@ -22,10 +22,15 @@ Department of Health guidance _[@DH2013]_ describes the central importance in th
 This document presents many of the key messages from Blackburn with Darwen’s JSNA. It begins with a profile of the borough’s population and local economy (‘Setting the Scene’), and is then arranged under the same three themes as the borough’s Joint Health and Wellbeing Strategy itself: ‘Start Well’, ‘Live Well’ and ‘Age Well’.
 
 ```{r include=FALSE}
-library(ggplot2)
+# library(ggplot2)
 library(plotly)
 library(scales)
 library(reshape)
+library(tidyverse)
+library(tidyr)
+library(readxl)
+library(fingertipsR)
+library(toOrdinal)
 # automatically create a bib database for R packages
 knitr::write_bib(c(
   .packages(), 'bookdown', 'knitr', 'rmarkdown'

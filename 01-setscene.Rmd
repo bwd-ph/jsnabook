@@ -81,30 +81,226 @@ A survey of crisis service users in various parts of the country was used to pro
 ![](Assets/p5_unnumbered.png)
 
 ### Life Expectancy
-Life expectancy in Blackburn with Darwen not only lags behind England (see shaded areas in Figure \@ref(fig:LEtrend)), but has plateaued in recent years, and shows some signs of actually starting to fall (though this decline is not statistically significant). In 2014-16, the borough had the 5th lowest life expectancy in England for males, and the 9th equal lowest for females, out of 324 lower-tier local authorities.
+```{block2, type = 'newstuff'}
+This section contains updated material 
+&nbsp;
+<div style="text-align: right;font-size:80%;"><em>[‘Sparkling’](https://thenounproject.com/term/sparkling/1200272) icon by Morten Halvorsen from [The Noun Project](https://thenounproject.com)</em></div>
+```
+Life expectancy in Blackburn with Darwen not only lags behind England (see shaded areas in Figure \@ref(fig:LEtrend)), but has plateaued in recent years for males, and actually fallen significantly since 2012-14 for females. In 2015-17, the borough had the 5th lowest life expectancy in England for females, and the 9th equal lowest for males, out of 324 lower-tier local authorities.
 
-(ref:LEtrendcap) Life expectancy in England and Blackburn with Darwen,<br/>2001-03 to 2014-16
+(ref:LEtrendcap) _(interactive)_ Life expectancy in England and Blackburn with Darwen
 
-```{r LEtrend, fig.cap='(ref:LEtrendcap)', echo=FALSE,out.width='75%', fig.align='center'}
-knitr::include_graphics("Assets/p6fig10.png")
+```{r LEtrend, fig.cap='(ref:LEtrendcap)', echo=FALSE,message = FALSE,out.width='85%', fig.align='center'}
+# knitr::include_graphics("Assets/p6fig10.png")
+
+BwDData <- fingertips_data(IndicatorID = 90366,AreaTypeID = 102,AreaCode = "E06000008",categorytype = TRUE) %>% 
+  filter(Age == "All ages", is.na(CategoryType)) 
+BwDData <- transmute(BwDData,`Area Codes` = AreaCode,period = paste(str_sub(Timeperiod,1,4),str_sub(Timeperiod,8,9),sep = "-"), LE = Value, Sex = if_else(Sex == "Male","M","F"))
+
+EngData <- fingertips_data(IndicatorID = 90366,AreaCode = "E92000001",categorytype = TRUE) %>% 
+  filter(Age == "All ages", is.na(CategoryType)) 
+EngData <- transmute(EngData,`Area Codes` = AreaCode,period = paste(str_sub(Timeperiod,1,4),str_sub(Timeperiod,8,9),sep = "-"), LE = Value, Sex = if_else(Sex == "Male","M","F"))
+
+LE <- bind_rows(BwDData,EngData) %>%
+  mutate(LE = as.numeric(LE)) %>%
+  mutate(linewidth = if_else(`Area Codes` == "E92000001",1,1.5)) %>%
+  rename(Area = `Area Codes`) %>%
+  mutate(Area = if_else(Area == "E92000001","England","BwD"))
+
+LE <- unite(LE,"allgroups",Sex,Area) %>% select(allgroups,period,LE) %>% spread(allgroups,LE)
+
+m <- list(
+  l = 150,
+  r = 50,
+  b = 120,
+  t = 60,
+  pad = 4
+)
+
+p <- plot_ly(LE,x = ~period,y = ~F_England,name = "England Female",legendgroup = 'group1',type = 'scatter', mode = 'lines', 
+             line = list(color = "Green",width = 1)) %>%
+     add_trace(y = ~F_BwD,name = "BwD Female",fill = 'tonexty', fillcolor = 'rgba(252, 201, 252, 0.4)',legendgroup = 'group1',line = list(color = "Blue", width = 2.5)) %>%
+     add_trace(y = ~M_England,name = "England Male",legendgroup = 'group2',line = list(color = "Green", width = 1)) %>%
+     add_trace(y = ~M_BwD,name = "BwD Male",fill = 'tonexty', fillcolor = 'rgba(166, 209, 251, 0.4)',legendgroup = 'group2',line = list(color = "Blue",width = 2.5)) %>%
+  add_annotations(
+       x=2,
+       y=80,
+       xref = "x",
+       yref = "y",
+       text = "<b>F</b>",
+       xanchor = 'center',
+       showarrow = F,
+       font = list(color = "#EE799F",size=20)
+      ) %>%
+     add_annotations(
+       x=2,
+       y=75.5,
+       xref = "x",
+       yref = "y",
+       text = "<b>M</b>",
+       xanchor = 'center',
+       showarrow = F,
+       font = list(color = "#6699CC",size=20)
+      ) %>%
+     add_annotations(
+       x = 0.5,
+       y = 1,
+       xref = "paper",
+       yref = "paper",
+       text = "<span style='color:green'>England</span> v. <span style='color:blue'>Blackburn with Darwen</span>",
+       font = list(size=16),
+       showarrow = F,
+       yanchor = "bottom"
+     ) %>%
+     layout(showlegend = FALSE, margin = m, xaxis = list(title = "",tickangle = 90), yaxis = list(title = "Life Expectancy (years)", hoverformat = '.1f'))
+p
 ```
 Even at a national level (green lines in Figure \@ref(fig:LEtrend)), the rate of improvement in life expectancy is much slower than it was. These trends are attracting increasing amounts of attention and comment, including an acknowledgement by ONS of their statistical significance, and an undertaking to investigate further _[@KF2017; @ONS_changetrend]_.
 
-There is also striking inequality in life expectancy within Blackburn with Darwen. To illustrate this, Public Health England has ranked the borough’s LSOAs by IMD score, divided them into ten equal groups (‘deciles’) of deprivation, and calculated the life expectancy for each _[@PHE_download]_.  As Figure \@ref(fig:slopechart) shows. the difference between the most and least deprived tenths of the borough was 11.6 years for males in 2014-16. For females, it was 8.4 years.
+```{r echo = FALSE, warning = FALSE, message = FALSE}
+LEDepData <- fingertips_data(IndicatorID = 90366,AreaTypeID = 102,AreaCode = "E06000008",categorytype = TRUE) %>% 
+  filter(CategoryType == "LSOA11 deprivation deciles within area (IMD2015)") 
+latest_date <- max(LEDepData$TimeperiodSortable)
+LEDepData <- filter(LEDepData,TimeperiodSortable == latest_date)
+latest_period <- first(LEDepData$Timeperiod)
 
-(ref:slopecap) Male life expectancy by deprivation decile,<br/>Blackburn with Darwen, 2014-16
+LEDepData$Category <- factor(LEDepData$Category,levels = c("Most deprived decile","Second most deprived decile","Third more deprived decile","Fourth more deprived decile",
+                                                 "Fifth more deprived decile","Fifth less deprived decile","Fourth less deprived decile","Third less deprived decile",
+                                                 "Second least deprived decile","Least deprived decile"))
+levels(LEDepData$Category)[levels(LEDepData$Category)=="Third more deprived decile"] <- "Third most deprived decile"
+levels(LEDepData$Category)[levels(LEDepData$Category)=="Fourth more deprived decile"] <- "Fourth most deprived decile"
+levels(LEDepData$Category)[levels(LEDepData$Category)=="Fifth more deprived decile"] <- "Fifth most deprived decile"
+levels(LEDepData$Category)[levels(LEDepData$Category)=="Third less deprived decile"] <- "Third least deprived decile"
+levels(LEDepData$Category)[levels(LEDepData$Category)=="Fourth less deprived decile"] <- "Fourth least deprived decile"
+levels(LEDepData$Category)[levels(LEDepData$Category)=="Fifth less deprived decile"] <- "Fifth least deprived decile"
 
-```{r slopechart, fig.cap='(ref:slopecap)', echo=FALSE,out.width='75%', fig.align='center'}
-knitr::include_graphics("Assets/p6fig11.png")
+# plotly version
+male <- filter(LEDepData,Sex == "Male")
+male$fv <- male %>% lm(Value ~ as.integer(Category),.) %>% fitted.values()
+male$hiarm <- male$UpperCI95.0limit - male$Value
+male$loarm <- male$Value - male$LowerCI95.0limit
+male$mytext <- paste(male$Category,": ",round(male$Value,1)," years",sep="")
+malecontrast <- male$Value[levels(male$Category)=="Least deprived decile"] - male$Value[levels(male$Category)=="Most deprived decile"]
+malecontrast <- round(malecontrast,1)
+
+female <- filter(LEDepData,Sex == "Female")
+female$fv <- female %>% lm(Value ~ as.integer(Category),.) %>% fitted.values()
+female$hiarm <- female$UpperCI95.0limit - female$Value
+female$loarm <- female$Value - female$LowerCI95.0limit
+female$mytext <- paste(female$Category,": ",round(female$Value,1)," years",sep="")
+femalecontrast <- female$Value[levels(female$Category)=="Least deprived decile"] - female$Value[levels(female$Category)=="Most deprived decile"]
+femalecontrast <- round(femalecontrast,1)
+```
+There is also striking inequality in life expectancy _within_ Blackburn with Darwen. To illustrate this, Public Health England has ranked the borough’s LSOAs by IMD score, divided them into ten equal groups (‘deciles’) of deprivation, and calculated the life expectancy for each _[@PHE_download]_.  As Figure \@ref(fig:slopechart) shows, the difference between the most and least deprived tenths of the borough was `r malecontrast` years for males in `r latest_period`. For females, it was `r femalecontrast` years.
+
+(ref:slopecap) _(interactive)_ Life expectancy by deprivation decile,<br/>Blackburn with Darwen, `r latest_period`
+
+```{r slopechart, fig.cap='(ref:slopecap)', echo=FALSE,out.width='85%', fig.align='center'}
+#knitr::include_graphics("Assets/p6fig11.png")
+
+m <- list(
+  l = 150,
+  r = 50,
+  b = 120,
+  t = 60,
+  pad = 4
+)
+
+p1 <- plot_ly(male,x = ~Category) %>%
+  add_trace(y = ~fv, type = 'scatter',mode = 'lines',showlegend = FALSE,line = list(color = "Gray",width = 1,dash = 'dot'), hoverinfo = 'none') %>%
+  add_trace(y = ~Value, text = ~mytext, hoverinfo = "text", name = "Male", type = 'scatter',mode = 'markers', marker = list(color = "#66B2FF",size = 15),
+            error_y = list(symmetric = FALSE,array = ~hiarm,arrayminus = ~loarm, type = "bar", color = "#0066CC")) %>%
+  layout(xaxis = list(title = "",tickangle = 90))
+p2 <- plot_ly(female,x = ~Category) %>%
+  add_trace(y = ~fv, type = 'scatter',mode = 'lines',showlegend = FALSE,line = list(color = "Gray",width = 1,dash = 'dot'), hoverinfo = 'none') %>%
+  add_trace(y = ~Value, text = ~mytext, hoverinfo = "text", name = "Female", type = 'scatter',mode = 'markers', marker = list(color = "#FF99CC",size = 15),
+            error_y = list(symmetric = FALSE,array = ~hiarm,arrayminus = ~loarm, type = "bar", color = "#CC0066")) %>%
+  layout(xaxis = list(title = "",tickangle = 90))
+p <- subplot(p1,p2, shareY=TRUE) %>%
+  layout(margin = m, yaxis = list(title = "Life Expectancy (years)", tickfont = list(size = 15)),legend = list(orientation = 'h', xanchor = "center",yanchor = "bottom",x=0.5,y=1,bgcolor = "#F5F5F5",font = list(size = 20)))
+p
 ```
 
 ### Premature Mortality
-The inequalities between more and less deprived parts of the borough are also illustrated in the 2018 Health Profile for Blackburn with Darwen _[@PHE_HP]_.  The gap in premature death rates is particularly stark for men:
+```{block2, type = 'newstuff'}
+This section contains updated material 
+&nbsp;
+<div style="text-align: right;font-size:80%;"><em>[‘Sparkling’](https://thenounproject.com/term/sparkling/1200272) icon by Morten Halvorsen from [The Noun Project](https://thenounproject.com)</em></div>
+```
+The inequalities between more and less deprived parts of the borough are also illustrated in the PHE Health Profile for Blackburn with Darwen _[@PHE_HP]_.  The gap in premature death rates is particularly stark for men:
 
-(ref:premcap) Premature mortality (under 75)<br/>for England, Blackburn with Darwen,<br/>& most/least deprived quintiles of Blackburn with Darwen<br/>for (a) males and (b) females
+(ref:premcap) Premature mortality (under 75, Male & Female)<br/>for England, Blackburn with Darwen,<br/>& most/least deprived quintiles of Blackburn with Darwen
 
-```{r premchart, fig.cap='(ref:premcap)', echo=FALSE,out.width='90%', fig.align='center'}
-knitr::include_graphics("Assets/p6fig12.png")
+```{r premchart, fig.cap='(ref:premcap)', echo=FALSE,out.width='95%', fig.align='center'}
+#knitr::include_graphics("Assets/p6fig12.png")
+
+BwDData <- fingertips_data(IndicatorID = 108,AreaTypeID = 102,AreaCode = "E06000008",categorytype = TRUE) %>%
+  filter(Sex != "Persons")
+latest_date <- max(BwDData[!is.na(BwDData$Category),]$TimeperiodSortable) # Don't want latest year if they haven't yet got round to
+                                                                          # doing inequalities data for it
+BwDData <- filter(BwDData,TimeperiodSortable <= latest_date)
+
+EngData <- fingertips_data(IndicatorID = 108,AreaCode = "E92000001",categorytype = TRUE) %>%
+  filter(Sex != "Persons",TimeperiodSortable <= latest_date, is.na(CategoryType))
+
+PM <- bind_rows(BwDData,EngData) %>%
+  transmute(Area = if_else(AreaCode == "E92000001","England","BwD"), Category, period = paste(str_sub(Timeperiod,1,4),str_sub(Timeperiod,8,9),sep = "-"), 
+            DSR = round(Value,1), Sex = if_else(Sex == "Male","M","F") )
+
+male <- filter(PM,Sex == "M") %>% unite("allgroups",Area,Category) %>% select(allgroups,period,DSR) %>% spread(allgroups,DSR)
+female <- filter(PM,Sex == "F") %>% unite("allgroups",Area,Category) %>% select(allgroups,period,DSR) %>% spread(allgroups,DSR)
+
+m <- list(
+  l = 100,
+  r = 150,
+  b = 120,
+  t = 60,
+  pad = 4
+)
+
+p1 <- plot_ly(male,x = ~period,y = ~`BwD_Most deprived quintile`,name = "BwD",text = ~ paste("<em>Most Deprived Quintile</em><br />",period,"<br />","Rate: <b>", `BwD_Most deprived quintile`,'</b>',""),type = 'scatter', mode = 'lines+markers', 
+             line = list(color = "Blue",width = 1), marker = list(size = 5, color = "Blue"), fill = 'tozeroy',fillcolor = 'rgba(0,0,255, 0.1)',hoverinfo = "text+name") %>%
+      add_trace(y = ~`BwD_Least deprived quintile`,name = "BwD",text = ~ paste("<em>Least Deprived Quintile</em><br />",period,"<br />","Rate: <b>",`BwD_Least deprived quintile`,'</b>',""),type = 'scatter', mode = 'lines+markers', 
+                line = list(color = "Blue",width = 1,dash = 'dot'),marker = list(size = 5, color = "Blue"), fill = 'tozeroy',fillcolor = 'rgb(255, 255, 255)',hoverinfo = "text+name") %>%
+      add_trace(y = ~BwD_NA, name = "BwD",text = ~ paste("<em>Overall</em><br />",period,"<br />","Rate: <b>", BwD_NA,'</b>',""),type = 'scatter', mode = 'lines+markers', line = list(color = "Blue",width = 2), marker = list(size = 10, color = "Blue"), fill = 'none',hoverinfo = "text+name") %>%
+      add_trace(y = ~England_NA, name = "England",text = ~ paste(period,"<br />","Rate: <b>", England_NA,'</b>',""),type = 'scatter', mode = 'lines+markers', line = list(color = "Green",width = 1.5), marker = list(size = 7, color = "Green"), fill = 'none',hoverinfo = "text+name") %>%
+      add_annotations(
+        x=0.15,
+        y=850,
+        xref = "paper",
+        yref = "y",
+        text = "<b>M</b>",
+        xanchor = 'center',
+        showarrow = F,
+        font = list(color = "#6699CC",size=20)
+      ) %>%
+     layout(showlegend = FALSE, xaxis = list(showgrid = FALSE,zeroline = FALSE, showline = FALSE, title = "",tickangle = 90,tickfont = list(size = 15)))
+
+p2 <- plot_ly(female,x = ~period,y = ~`BwD_Most deprived quintile`,name = "BwD",text = ~ paste("<em>Most Deprived Quintile</em><br />",period,"<br />","Rate: <b>", `BwD_Most deprived quintile`,'</b>',""),type = 'scatter', mode = 'lines+markers', 
+              line = list(color = "Blue",width = 1), marker = list(size = 5, color = "Blue"), fill = 'tozeroy',fillcolor = 'rgba(252, 201, 252, 0.4)',hoverinfo = "text+name") %>%
+      add_trace(y = ~`BwD_Least deprived quintile`,name = "BwD",text = ~ paste("<em>Least Deprived Quintile</em><br />",period,"<br />","Rate: <b>",`BwD_Least deprived quintile`,'</b>',""),type = 'scatter', mode = 'lines+markers', 
+            line = list(color = "Blue",width = 1,dash = 'dot'),marker = list(size = 5, color = "Blue"), fill = 'tozeroy',fillcolor = 'rgb(255, 255, 255)',hoverinfo = "text+name") %>%
+      add_trace(y = ~BwD_NA, name = "BwD",text = ~ paste("<em>Overall</em><br />",period,"<br />","Rate: <b>", BwD_NA,'</b>',""),type = 'scatter', mode = 'lines+markers', line = list(color = "Blue",width = 2), marker = list(size = 10, color = "Blue"), fill = 'none',hoverinfo = "text+name") %>%
+      add_trace(y = ~England_NA, name = "England",text = ~ paste(period,"<br />","Rate: <b>", England_NA,'</b>',""),type = 'scatter', mode = 'lines+markers', line = list(color = "Green",width = 1.5), marker = list(size = 7, color = "Green"), fill = 'none',hoverinfo = "text+name") %>%
+      add_annotations(x = 0.95,y = female[nrow(female),]$`BwD_Most deprived quintile`,xref = "paper",yref = "y",text = " Most deprived<br> quintile of BwD",xanchor = "left",yanchor = "bottom",showarrow = F,font = list(color = "Blue",size = 12)) %>%
+      add_annotations(x = 0.95,y = female[nrow(female),]$`BwD_NA`,xref = "paper",yref = "y",text = sprintf(" <b>BwD overall</b>"),xanchor = "left",yanchor = "middle",showarrow = F,font = list(color = "Blue",size = 15)) %>%
+      add_annotations(x = 0.95,y = female[nrow(female),]$`England_NA`,xref = "paper",yref = "y",text = " England",xanchor = "left",yanchor = "middle",showarrow = F,font = list(color = "Green",size = 15)) %>%
+      add_annotations(x = 0.95,y = female[nrow(female),]$`BwD_Least deprived quintile`,xref = "paper",yref = "y",text = " Least deprived<br> quintile of BwD",xanchor = "left",yanchor = "top",showarrow = F,font = list(color = "Blue",size = 12)) %>%
+      add_annotations(
+        x=0.15,
+        y=550,
+        xref = "paper",
+        yref = "y",
+        text = "<b>F</b>",
+        xanchor = 'center',
+        showarrow = F,
+        font = list(color = "#EE799F",size=20)
+      ) %>%
+      layout(showlegend = FALSE, xaxis = list(showgrid = FALSE,zeroline = FALSE, showline = FALSE, title = "",tickangle = 90,tickfont = list(size = 15)))
+
+p <- subplot(p1,p2, shareY=TRUE) %>%
+      layout(margin = m, yaxis = list(showgrid = FALSE,zeroline = FALSE, showline = FALSE,tickfont = list(size = 15), tickprefix = "  ",title = "Directly Standardised Rate per 100,000",titlefont = list(size = 18)))
+p
 ```
 
 ## Local Economy
@@ -182,7 +378,7 @@ nomisdata$geogAbb <- ifelse(nomisdata$GEOGRAPHY_NAME == 'Blackburn with Darwen',
 ```
 The Claimant Count now consists of the (diminishing) number of people still on Job Seekers Allowance, plus those claiming Universal Credit _who are required to seek work_ _[@HCL_unemp]_.  It is available on this basis going back to April 2015 (Figure \@ref(fig:claimcountchart)). The latest Claimant Count total for the borough (in `r latestDate`) was `r bwdLatestCount`. As a percentage of the working-age population (not just the economically active), this gives a rate of `r bwdLatestRate`%.
 
-(ref:claimcountcap) Claimant Count as a % of residents aged 16-64 _[@Nomis]_
+(ref:claimcountcap) _(interactive)_ Claimant Count as a % of residents aged 16-64 _[@Nomis]_
 
 ```{r claimcountchart, fig.cap='(ref:claimcountcap)', echo = FALSE, warning = FALSE, message = FALSE, fig.align='center'}
 #knitr::include_graphics("Assets/p8fig17.png")
@@ -256,12 +452,81 @@ knitr::include_graphics("Assets/p9fig20.png")
 ```
 
 ### Earnings
-Provisional median gross weekly earnings for Blackburn with Darwen residents in 2017 were £352.30. This puts Blackburn with Darwen second lowest (after Blackpool), out of 150 upper-tier authorities in England (Figure \@ref(fig:earnchart)) _[@ONS_ASHE]_.
+```{block2, type = 'newstuff'}
+This section contains updated material 
+&nbsp;
+<div style="text-align: right;font-size:80%;"><em>[‘Sparkling’](https://thenounproject.com/term/sparkling/1200272) icon by Morten Halvorsen from [The Noun Project](https://thenounproject.com)</em></div>
+```
+```{r echo = FALSE, warning = FALSE, message = FALSE}
+earnings <- read.csv('http://www.nomisweb.co.uk/api/v01/dataset/NM_30_1.data.csv?geography=1941962826,1941962832,1941962827,1941962833,1941962834,1941962828,1941962835,1941962829,1941962830,1941962836,1941962831,1941962803,1941962807,1941962804,1941962808...1941962810,1941962805,1941962811,1941962806,1941962851...1941962855,1941962837,1941962838,1941962856...1941962859,1941962839...1941962841,1941962860...1941962863,1941962842,1941962843,1941962864,1941962844,1941962845,1941962865,1941962846,1941962866,1941962867,1941962847,1941962868,1941962848,1941962869,1941962849,1941962850,1941962754,1941962753,1941962760,1941962755,1941962756,1941962761,1941962762,1941962757,1941962758,1941962763,1941962759,1941962764...1941962766,1941962772,1941962773,1941962767,1941962768,1941962771,1941962769,1941962783,1941962782,1941962784,1941962774...1941962777,1941962785,1941962786,1941962778...1941962780,1941962770,1941962781,1941962787,1941962870,1941962871,1941962882...1941962884,1941962872,1941962885,1941962873,1941962874,1941962886,1941962875...1941962878,1941962887,1941962879,1941962888,1941962880,1941962881,1941962889...1941962892,1941962901...1941962903,1941962893...1941962896,1941962904,1941962897...1941962900,1941962818...1941962820,1941962812,1941962821,1941962813,1941962822,1941962816,1941962814,1941962815,1941962823,1941962817,1941962824,1941962825,1941962794,1941962798,1941962799,1941962795,1941962788,1941962789,1941962800,1941962801,1941962790,1941962791,1941962793,1941962796,1941962797,1941962802,1941962792,2092957699,2013265922&date=latest&sex=7&item=2&pay=1&measures=20100,20701&select=date_name,geography_name,geography_code,sex_name,pay_name,item_name,measures_name,obs_value,obs_status_name')
 
-(ref:earncap) Provisional Median Gross Weekly Earnings of residents -<br/>Upper-Tier Authorities in England (2017) <em>[@ONS_ASHE]</em>
+bwdearnings <- earnings %>% filter(GEOGRAPHY_CODE == "E06000008" & MEASURES_NAME == "Value") %>% select(OBS_VALUE)
+Englandearnings <- earnings %>% filter(GEOGRAPHY_CODE == "E92000001" & MEASURES_NAME == "Value") %>% select(OBS_VALUE)
+NWearnings <- earnings %>% filter(GEOGRAPHY_CODE == "E12000002" & MEASURES_NAME == "Value") %>% select(OBS_VALUE)
 
-```{r earnchart, fig.cap='(ref:earncap)', echo=FALSE,out.width='60%', fig.align='center'}
-knitr::include_graphics("Assets/p9fig21.png")
+bwdearnings <- as.numeric(bwdearnings)
+Englandearnings <- as.numeric(Englandearnings)
+NWearnings <- as.numeric(NWearnings)
+
+thisyear <- first(earnings$DATE_NAME)
+
+mainearnings <- earnings %>% filter(MEASURES_NAME == "Value") %>%
+  filter(GEOGRAPHY_CODE != "E92000001" & GEOGRAPHY_CODE != "E12000002") %>% # eliminate England and Nw
+  filter(!is.na(OBS_VALUE)) %>% # effectively eliminates Scilly
+  mutate(earnrank = rank(OBS_VALUE)) %>%
+  arrange(earnrank) %>%
+  select(GEOGRAPHY_NAME,GEOGRAPHY_CODE,earnings = OBS_VALUE,earnrank) %>%
+  mutate(BwD = ifelse(GEOGRAPHY_NAME == "Blackburn with Darwen",1,0)) %>%
+  mutate(Englandearnings = Englandearnings) %>%
+  mutate(NWearnings = NWearnings)
+
+mainearnings$GEOGRAPHY_NAME <- factor(mainearnings$GEOGRAPHY_NAME) #drop unused levels
+mainearnings$GEOGRAPHY_NAME <- reorder(x = mainearnings$GEOGRAPHY_NAME,X = mainearnings$earnings,FUN = sum)
+mainearnings$GEOGRAPHY_CODE <- factor(mainearnings$GEOGRAPHY_CODE) #drop unused levels
+mainearnings$BwD <- factor(mainearnings$BwD)
+mainearnings$my_hover <- paste0(mainearnings$GEOGRAPHY_NAME,": ",sprintf("£%.2f", mainearnings$earnings),sep="")
+
+bwdearnrank <- mainearnings %>% filter(GEOGRAPHY_CODE == "E06000008") %>% select(earnrank)
+bwdearnrankfloor <- floor(bwdearnrank)
+bwdearnrankjoint <- ifelse(bwdearnrank == bwdearnrankfloor,"","joint ") # e.g. if rank is '8.5', that means a tie
+bwdrank <- paste0(bwdearnrankjoint,toOrdinal(bwdearnrankfloor),"")
+bwdrank <- ifelse(bwdrank == "1st","",bwdrank) # Don't want to say '1st lowest'
+numLAs <- nrow(mainearnings)
+```
+Provisional median gross weekly earnings for Blackburn with Darwen residents in `r thisyear` were £`r bwdearnings`. This puts Blackburn with Darwen `r bwdrank` lowest out of `r numLAs` upper-tier authorities in England (Figure \@ref(fig:earnchart)) _[@Nomis]_.
+
+(ref:earncap) _(interactive)_ Provisional Median Gross Weekly Earnings of residents -<br/><span style='color:blue'>Blackburn with Darwen</span> v. other Upper-Tier Authorities in England (`r thisyear`) <em>[@Nomis]</em>
+
+```{r earnchart, fig.cap='(ref:earncap)', echo=FALSE,out.width='100%', fig.align='center'}
+# knitr::include_graphics("Assets/p9fig21.png")
+# Plotly chart
+m <- list(
+  l = 50,
+  r = 50,
+  b = 30,
+  t = 10,
+  pad = 4
+)
+
+p <- plot_ly(mainearnings,x = ~GEOGRAPHY_NAME,y = ~earnings,
+        type = "bar", text = ~my_hover, hoverinfo = "text",
+        color = ~BwD, colors = c("Lightblue","Blue")) %>%
+  
+    add_trace(y = ~Englandearnings, type = "scatter", mode = "lines", line = list(color = "Green")) %>%
+    add_trace(y = ~NWearnings,type = "scatter", mode = "lines",line = list(color = "Red")) %>%
+    
+    add_annotations(xref = "paper",yref = "y",x = 1,y = Englandearnings,xanchor = "right",yanchor = "bottom",
+                    text = paste0("England: ",sprintf("£%.2f", Englandearnings),sep=""),
+                    showarrow = F, font = list(color = "Green", size = 12)) %>%
+    add_annotations(xref = "paper",yref = "y",x = 1,y = NWearnings,xanchor = "right",yanchor = "top",
+                    text = paste0("North West: ",sprintf("£%.2f", NWearnings),sep=""),
+                    showarrow = F, font = list(color = "Red", size = 12)) %>%
+  
+    layout(margin = m, showlegend = FALSE,bargap = 0, 
+    xaxis = list(title = "", showspikes = TRUE, showticklabels = FALSE,
+      tickfont = list(color = "White")), # Don't want to see x-axis labels but still want showspikes to work
+    yaxis = list(title = "", tickprefix = "£", hoverformat = '.2f')) 
+p
 ```
 
 ### Household Income
