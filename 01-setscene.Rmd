@@ -2,18 +2,64 @@
 ## Population
 ###Population Estimates\
 and Projections
-#### Mid-2017 Estimates
-The latest ONS population estimates _[@ONS_popest]_ are for mid-2017, and show that Blackburn with Darwen had a total of 148,772 residents (an increase of 310 since mid-2016). In Figure \@ref(fig:pyramid) below, the England age structure is superimposed for comparison. This illustrates that Blackburn with Darwen has a much younger age profile than average. 28.5% of its population is aged under 20, which is the 6th highest proportion in England.
+#### Mid-2018 Estimates
+The latest ONS population estimates _[@ONS_popest]_ are for mid-2018, and show that Blackburn with Darwen had a total of 148,942 residents (an increase of 170 since mid-2017). In Figure \@ref(fig:pyramid) below, the England age structure is superimposed for comparison. This illustrates that Blackburn with Darwen has a much younger age profile than average. 28.4% of its population is aged under 20, which is the 6th highest proportion in England.
 
-(ref:pyramidcap) ONS mid-2017 population estimate for Blackburn with Darwen<br/>(with England profile for comparison)
+(ref:pyramidcap) ONS mid-2018 population estimate for Blackburn with Darwen<br/>(with England profile for comparison)
 
 ```{r pyramid, fig.cap='(ref:pyramidcap)', echo=FALSE, out.width='75%',fig.align='center'}
 knitr::include_graphics("Assets/p2fig1.png")
 ```
 #### Population Projections 
 The latest population projections _[@ONS_popproj]_ are still based on the population estimates for mid-2016, and look ahead to 2041. For Blackburn with Darwen overall, they predict a slow, almost imperceptible fall in population (Figure \@ref(fig:projections)). However, the 65+ age-group (shown in green) is expected to rise by approximately 8,300 over the period - ie. by almost 40%. The 85+ group in particular is projected to rise by over 80%, from approximately 2400 to 4400.
-```{r projections, fig.cap='(2016-based ONS population projections, Blackburn with Darwen)ref:pyramidcap)', echo=FALSE,out.width='75%', fig.align='center'}
-knitr::include_graphics("Assets/p2fig2.png")
+
+(ref:Projectioncap) _(interactive)_ 2016-based ONS population projections, Blackburn with Darwen
+
+```{r projections, fig.cap='(ref:Projectioncap)', echo=FALSE,message = FALSE, warning = FALSE, out.width='100%', fig.align='center'}
+# knitr::include_graphics("Assets/p2fig2.png")
+proj <- read.csv("http://www.nomisweb.co.uk/api/v01/dataset/NM_2006_1.data.csv?geography=1870659597&projected_year=2016...2041&gender=0&c_age=200,1,3...18,210,191&measures=20100&select=geography_name,geography_code,projected_year_name,c_age_name,obs_value")
+
+# NB - '85+' in Nomis is inclusive of 90+. We need to change it to '85-89'.
+
+proj85to89 <- proj %>% filter(C_AGE_NAME %in% c('Aged 85+','Aged 90+')) %>%
+   spread(C_AGE_NAME,OBS_VALUE) %>% mutate(`Aged 85-89` = `Aged 85+` - `Aged 90+`) %>%
+   gather('C_AGE_NAME','OBS_VALUE',4:6) %>%
+   filter(C_AGE_NAME == 'Aged 85-89')
+
+proj <- proj %>% filter(C_AGE_NAME != "Aged 85+") %>% bind_rows(proj85to89)
+
+proj_allage <- proj %>% filter(C_AGE_NAME == 'All Ages')
+proj <- proj %>% filter(C_AGE_NAME != 'All Ages') # proj just now has each age group once only with no overlap
+
+# Rationalise factor ordering and naming
+proj$C_AGE_NAME <- factor(proj$C_AGE_NAME,levels=c("Age 0 - 4","Aged 5-9","Aged 10-14","Aged 15-19",
+                                                         "Aged 20-24","Aged 25-29","Aged 30-34","Aged 35-39",
+                                                         "Aged 40-44","Aged 45-49","Aged 50-54","Aged 55-59",
+                                                         "Aged 60-64","Aged 65-69","Aged 70-74","Aged 75-79",
+                                                         "Aged 80-84","Aged 85-89","Aged 90+"))
+levels(proj$C_AGE_NAME)[levels(proj$C_AGE_NAME) == "Age 0 - 4"] <- "Aged 0-4"
+
+m <- list(
+  l = 200,
+  r = 200,
+  b = 60,
+  t = 50,
+  pad = 4
+)
+
+pal1 <- brewer.pal(n=6,"Reds")
+pal2 <- brewer.pal(n=7,"Blues")
+pal3 <- brewer.pal(n=6,"Greens")
+mypal <- c(pal1,pal2,pal3)
+
+proj %>% group_by(PROJECTED_YEAR_NAME) %>% arrange(C_AGE_NAME) %>% 
+  mutate(cum_pop = cumsum(OBS_VALUE)) %>%
+  plot_ly(width = 800, height = 700,type = 'scatter', x = ~PROJECTED_YEAR_NAME, y = ~cum_pop, color = ~C_AGE_NAME, colors = mypal,mode = 'lines', fill = 'tonexty',alpha = 1,
+          hoverinfo = "x+name+text",
+          text = ~paste("<b>",round(OBS_VALUE)," persons</b>")) %>%
+  layout(margin = m,xaxis = list(title = "Year",tickfont = list(size = 15),titlefont = list(size = 18)),
+         yaxis = list(title = "Projected Population",tickfont = list(size = 15),titlefont = list(size = 18)),
+         hovermode = 'compare',legend = list(x = -0.55,y=0,font = list(size = 15)))
 ```
 ### 2011 Census Data
 #### Ethnicity
@@ -155,7 +201,7 @@ p <- plot_ly(LE,x = ~period,y = ~F_England,name = "England Female",legendgroup =
      layout(showlegend = FALSE, margin = m, xaxis = list(title = "",tickangle = 90), yaxis = list(title = "Life Expectancy (years)", hoverformat = '.1f'))
 p
 ```
-Even at a national level (green lines in Figure \@ref(fig:LEtrend)), the rate of improvement in life expectancy is much slower than it was. These trends are attracting increasing amounts of attention and comment, including an acknowledgement by ONS of their statistical significance, and an undertaking to investigate further _[@KF2017; @ONS_changetrend]_.
+Even at a national level (green lines in Figure \@ref(fig:LEtrend)), the rate of improvement in life expectancy is much slower than it was. There are also widening inequalities between more and less deprived areas of England, with female life expectancy in the most deprived areas actually falling. In a report on these changing trends, Public Health England concludes that they are likely to be due to a number of factors rather than any single cause _[@PHE_morttrend]_.
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE}
 LEDepData <- fingertips_data(IndicatorID = 90366,AreaTypeID = 102,AreaCode = "E06000008",categorytype = TRUE) %>% 
@@ -190,10 +236,11 @@ female$loarm <- female$Value - female$LowerCI95.0limit
 female$mytext <- paste(female$Category,": ",round(female$Value,1)," years",sep="")
 femalecontrast <- female$Value[levels(female$Category)=="Least deprived decile"] - female$Value[levels(female$Category)=="Most deprived decile"]
 femalecontrast <- round(femalecontrast,1)
-```
-There is also striking inequality in life expectancy _within_ Blackburn with Darwen. To illustrate this, Public Health England has ranked the borough’s LSOAs by IMD score, divided them into ten equal groups (‘deciles’) of deprivation, and calculated the life expectancy for each _[@PHE_download]_.  As Figure \@ref(fig:slopechart) shows, the difference between the most and least deprived tenths of the borough was `r malecontrast` years for males in `r latest_period`. For females, it was `r femalecontrast` years.
 
-(ref:slopecap) _(interactive)_ Life expectancy by deprivation decile,<br/>Blackburn with Darwen, `r latest_period`
+```
+There is also striking inequality in life expectancy _within_ Blackburn with Darwen (Figure \@ref(fig:slopechart)). To illustrate this, Public Health England has ranked the borough’s LSOAs by IMD score, divided them into ten equal groups (‘deciles’) of deprivation, and calculated the life expectancy for each _[@PHE_download]_.  Allowing for rounding error, the difference between the most and least deprived tenths of the borough was `r malecontrast` years for males in `r latest_period`. For females, it was `r femalecontrast` years.
+
+(ref:slopecap) _(interactive)_ Life expectancy by deprivation decile<br/>(showing 95% confidence intervals)<br/>Blackburn with Darwen, `r latest_period`
 
 ```{r slopechart, fig.cap='(ref:slopecap)', echo=FALSE,out.width='85%', fig.align='center'}
 #knitr::include_graphics("Assets/p6fig11.png")
@@ -229,7 +276,7 @@ This section contains updated material
 ```
 The inequalities between more and less deprived parts of the borough are also illustrated in the PHE Health Profile for Blackburn with Darwen _[@PHE_HP]_.  The gap in premature death rates is particularly stark for men:
 
-(ref:premcap) Premature mortality (under 75, Male & Female)<br/>for England, Blackburn with Darwen,<br/>& most/least deprived quintiles of Blackburn with Darwen
+(ref:premcap) _(interactive)_ Premature mortality (under 75, Male & Female)<br/>for England, Blackburn with Darwen,<br/>& most/least deprived quintiles of Blackburn with Darwen
 
 ```{r premchart, fig.cap='(ref:premcap)', echo=FALSE,out.width='95%', fig.align='center'}
 #knitr::include_graphics("Assets/p6fig12.png")
@@ -307,41 +354,351 @@ p
 Any analysis of health and social care needs would be incomplete without a quick introduction to the local economy, not only because it helps to set the context, but also because the economy is a major determinant of health. 
 
 ### Skills
-In 2017, there were estimated to be 11,000 people aged 16-64 in Blackburn with Darwen with no qualifications, or 12.1% of the working-age population (England 7.6%) _[@CC2018]_.  Clearly such a high rate (ranking 21st among upper-tier authorities) is undesirable. Data from the Centre for Cities provides a stark illustration of the relationship between lack of qualifications and the employment rate (Figure \@ref(fig:skillchart)) _[@CC2018]_.
+```{block2, type = 'newstuff'}
+This section contains updated material 
+&nbsp;
+<div style="text-align: right;font-size:80%;"><em>[‘Sparkling’](https://thenounproject.com/term/sparkling/1200272) icon by Morten Halvorsen from [The Noun Project](https://thenounproject.com)</em></div>
+```
+```{r echo = FALSE, warning = FALSE, message = FALSE}
+# Read in data for last 4 quarters, then filter to find the one for which qualifications data is not missing (i.e. the January-December one)
+qualsEmp <- read.csv("http://www.nomisweb.co.uk/api/v01/dataset/NM_17_5.data.csv?geography=2092957699,1816133633...1816133837&date=latest,latestMINUS1,latestMINUS2,latestMINUS3&variable=45,344&measures=20599,21001,21002,21003&select=date_name,geography_name,geography_code,variable_name,measures_name,obs_value,obs_status_name")
+qualsEmp <- qualsEmp %>% filter(substr(as.character(DATE_NAME),10,12) == "Dec")
 
-(ref:skillcap) Relationship between employment rate and lack of qualifications<br/><em>'Primary Urban Areas' in England. Source: Centre for Cities</em>
+bwdNoquals <- qualsEmp %>% filter(GEOGRAPHY_NAME == "Blackburn with Darwen" & VARIABLE_NAME == "% with no qualifications (NVQ) - aged 16-64" & MEASURES_NAME == "Numerator") %>%
+  select(OBS_VALUE) %>% pull()
+bwdNoquals <- as.integer(bwdNoquals) # don't want it to show as scientific notation
+bwdNoqualspc <- qualsEmp %>% filter(GEOGRAPHY_NAME == "Blackburn with Darwen" & VARIABLE_NAME == "% with no qualifications (NVQ) - aged 16-64" & MEASURES_NAME == "Variable") %>%
+  select(OBS_VALUE) %>% pull()
+EngNoqualspc <- qualsEmp %>% filter(GEOGRAPHY_NAME == "England" & VARIABLE_NAME == "% with no qualifications (NVQ) - aged 16-64" & MEASURES_NAME == "Variable") %>%
+  select(OBS_VALUE) %>% pull()
+yearending <- substr(as.character(first(qualsEmp$DATE_NAME)),10,17)
 
-```{r skillchart, fig.cap='(ref:skillcap)', echo=FALSE,out.width='60%', fig.align='center'}
-knitr::include_graphics("Assets/p7fig13.png")
+qualsEmp <- qualsEmp %>% filter(substr(GEOGRAPHY_CODE,1,1) == "E" & GEOGRAPHY_CODE != "E92000001") %>%
+  filter(MEASURES_NAME == "Variable") %>%
+  spread(key = VARIABLE_NAME, value = OBS_VALUE) %>%
+  drop_na() %>%
+  mutate(mytext = paste(GEOGRAPHY_NAME,"\n","% No quals = ",`% with no qualifications (NVQ) - aged 16-64`,"%",
+                      "\n","Employment Rate = ",`Employment rate - aged 16-64`,"%",sep = ""),
+         BwD = factor(GEOGRAPHY_NAME == "Blackburn with Darwen"),
+         NoQualRank = rank(-`% with no qualifications (NVQ) - aged 16-64`))
+utlas <- nrow(qualsEmp)
+BwDrank <- qualsEmp %>% filter(GEOGRAPHY_NAME == "Blackburn with Darwen") %>% select(NoQualRank) %>% pull()
+BwDrank <- toOrdinal(floor(BwDrank))
+```
+In the year to `r yearending`, there were estimated to be `r bwdNoquals` people aged 16-64 in Blackburn with Darwen with no qualifications, or `r bwdNoqualspc`% of the working-age population (England `r EngNoqualspc`%) _[@Nomis]_.  Clearly such a high rate (ranking `r BwDrank` among `r utlas` upper-tier authorities) is undesirable. Data from Nomis provides a stark illustration of the relationship between lack of qualifications and the employment rate (Figure \@ref(fig:skillchart)) _[@Nomis]_.
+
+(ref:skillcap) _(interactive)_ Relationship between employment rate<br/>and lack of qualifications (year to `r yearending`)<br/><span style='color:blue'>Blackburn with Darwen</span> v. other Upper-Tier Authorities in England _[@Nomis]_.
+
+```{r skillchart, fig.cap='(ref:skillcap)', echo=FALSE,warning = FALSE, message = FALSE,out.width='90%', fig.align='center'}
+# knitr::include_graphics("Assets/p7fig13.png")
+pal <- c("lightskyblue","blue")
+
+xx <- list(
+  title = "% No Qualifications",
+  ticksuffix = "%",
+  tickfont = list(size = 14),
+  titlefont = list(size = 18)
+)
+yx <- list(
+  title = "Employment Rate",
+  ticksuffix = "%",
+  tickprefix = "  ",
+  tickfont = list(size = 14),
+  titlefont = list(size = 18)
+)
+
+m <- list(
+  l = 50,
+  r = 50,
+  b = 50,
+  t = 50,
+  pad = 4
+)
+
+fv <- lm(`Employment rate - aged 16-64` ~ `% with no qualifications (NVQ) - aged 16-64`,data = qualsEmp) %>% fitted.values()
+
+p <- qualsEmp %>%
+  plot_ly(width = 700, height = 700, x = ~`% with no qualifications (NVQ) - aged 16-64`,y = ~`Employment rate - aged 16-64`,color = ~ BwD) %>%
+  add_markers(colors = pal,marker = list(size = 12),
+             text = ~ paste("<b>",GEOGRAPHY_NAME,"</b><br />",
+                            "% No Quals: <b>",`% with no qualifications (NVQ) - aged 16-64`,'%</b>',"<br />",
+                            "Employment Rate: <b>",`Employment rate - aged 16-64`,'%</b>'), hoverinfo = "text") %>%
+  add_trace(x = ~`% with no qualifications (NVQ) - aged 16-64`,y = fv,mode = "lines", line = list(color = "black")) %>%
+  layout(xaxis = xx, yaxis = yx, margin = m,showlegend = FALSE,
+         legend = list(x = 0.1, y = 0.9)
+  ) 
+p
 ```
 
-At the other end of the spectrum, 21.4% of people aged 16-64 in Blackburn with Darwen had a degree or equivalent in 2017. This is still well below average (England 31.1%), but it continues a gradually improving trend, and means that the borough is on the verge of leaving the bottom quintile of local authorities _[@Nomis]_. 
+```{r echo = FALSE, warning = FALSE, message = FALSE}
+# Want the most recent Jan-Dec period, as only they have qualifications data
+degree <- read.csv("http://www.nomisweb.co.uk/api/v01/dataset/NM_17_5.data.csv?geography=2092957699,1816133633...1816133837&date=latestMINUS3-latest&variable=1072&measures=20599,21001,21002,21003&select=date_name,geography_name,geography_code,variable_name,measures_name,obs_value,obs_status_name")
+degree <- degree %>% filter(substr(as.character(DATE_NAME),10,12) == "Dec")
+
+BwDdegreepc <- degree %>% filter(GEOGRAPHY_NAME == "Blackburn with Darwen" & MEASURES_NAME == "Variable") %>% select(OBS_VALUE) %>% pull()
+Engdegreepc <- degree %>% filter(GEOGRAPHY_NAME == "England" & MEASURES_NAME == "Variable") %>% select(OBS_VALUE) %>% pull()
+yearending <- substr(as.character(first(degree$DATE_NAME)),10,17)
+
+degree <- degree %>% filter(substr(GEOGRAPHY_CODE,1,1) == "E" & GEOGRAPHY_CODE != "E92000001") %>%
+  filter(MEASURES_NAME == "Variable") %>%
+  drop_na() %>%
+  mutate(degreeRank = rank(OBS_VALUE))
+utlas <- nrow(degree)
+BwDrank <- degree %>% filter(GEOGRAPHY_NAME == "Blackburn with Darwen") %>% select(degreeRank) %>% pull()
+BwDrank <- toOrdinal(floor(BwDrank))
+```
+At the other end of the spectrum, `r BwDdegreepc`% of people aged 16-64 in Blackburn with Darwen had a degree or equivalent in the year ending `r yearending`. This is still well below average (England `r Engdegreepc`%), and ranks `r BwDrank` lowest out of `r utlas` upper-tier authorities, but it continues a gradually improving trend _[@Nomis]_. 
 
 The proportion of the borough’s 19-year-olds qualified to Level 3 (i.e. two A-levels or equivalent) has also shown steady improvement over the years (Figure \@ref(fig:qual19chart)) _[@DfE_age19]_. 
 
-```{r qual19chart, fig.cap='Level 3 qualification at age 19', echo = FALSE, out.width = '60%', fig.align='center'}
-knitr::include_graphics("Assets/p7fig14.png")
+(ref:qual19cap) _(interactive)_ Level 3 qualification at age 19 _[@DfE_age19]_.
+
+```{r qual19chart, fig.cap='(ref:qual19cap)', echo = FALSE, message = FALSE, warning = FALSE,out.width = '90%', fig.align='center'}
+# knitr::include_graphics("Assets/p7fig14.png")
+
+### **** NB **** - EACH YEAR, GO TO https://department-for-education.shinyapps.io/attainment-age-19/, 
+### 'Data and methods' tab, and download the latest
+### data file (la_underlying_data.csv) to the 'Assets' subdirectory
+
+quals19 <- read.csv("./Assets/la_underlying_data.csv", stringsAsFactors = FALSE)
+
+level3age19 <- quals19 %>% filter(la_name == "Blackburn with Darwen"| (region == "j.England" & la_name == "ALL") | (region == "b.North West" & la_name == "ALL")) %>%        
+  filter(gender == "a.ALL" & sen == "a.ALL" & fsm == "a.ALL") %>% 
+  mutate(area = ifelse(la_name == "Blackburn with Darwen","BwD",ifelse(region == "j.England","England","NW")),level3pc = as.numeric(l3_by19_rate)) %>%
+  select(year = cohort_19_in,area,level3pc) %>%
+  spread(key = area,value = level3pc)
+
+m <- list(
+  l = 150,
+  r = 50,
+  b = 50,
+  t = 90,
+  pad = 4
+)
+
+p <- plot_ly(level3age19,x = ~year) %>%
+  add_trace(y = ~BwD,line = list(color = "blue",width = 3),marker = list(size = 8, color = "Blue"),
+            type = 'scatter', mode = 'lines+markers',
+            hoverinfo = 'text',name = "Blackburn with Darwen",
+            text = ~ paste("<b>BwD </b>",year,"<br />","Level 3: <b>",round(BwD,1),'%</b>',"")) %>%
+  add_trace(y = ~NW,line = list(color = "red",width =2 ),marker = list(size = 6, color = "red"),
+            type = 'scatter', mode = 'lines+markers',
+            hoverinfo = 'text',name = "North West",
+            text = ~ paste("<b>NW </b>",year,"<br />","Level 3: <b>",round(NW,1),'%</b>',"")) %>%
+  add_trace(y = ~England,line = list(color = "green",width = 2),marker = list(size = 6, color = "green"),
+            type = 'scatter', mode = 'lines+markers',
+            hoverinfo = 'text',name = "England",
+            text = ~ paste("<b>England </b>",year,"<br />","Level 3: <b>",round(England,1),'%</b>',"")) %>%
+  layout(margin = m,title = "Percentage with Level 3 qualification at age 19", xaxis = list(title = "",dtick=1,tickfont = list(size = 15)), 
+         yaxis = list(title = "", range = c(30,65),ticksuffix = "%",tickfont = list(size = 15)),
+         legend = list(x = 0.5,y=0.1,font = list(size = 15)))
+p
 ```
 
 ### Economic Activity
-As seen in Figure \@ref(fig:activitychart), an estimated 65.3% of the borough’s residents aged 16-64 are employed _[@Nomis]_. This is the 9th lowest rate out of 150 upper tier local authorities (not including the City of London and Scilly Isles).
+```{block2, type = 'newstuff'}
+This section contains updated material 
+&nbsp;
+<div style="text-align: right;font-size:80%;"><em>[‘Sparkling’](https://thenounproject.com/term/sparkling/1200272) icon by Morten Halvorsen from [The Noun Project](https://thenounproject.com)</em></div>
+```
+```{r echo = FALSE, warning = FALSE, message = FALSE}
+# Economic activity breakdown, upper-tier authorities plus NW and England
+activitydata <- read.csv('http://www.nomisweb.co.uk/api/v01/dataset/NM_17_5.data.csv?geography=1816133706,1816133712,1816133707,1816133713,1816133714,1816133708,1816133715,1816133709,1816133710,1816133716,1816133711,1816133683,1816133687,1816133684,1816133688...1816133690,1816133685,1816133691,1816133686,1816133731...1816133735,1816133717,1816133718,1816133736...1816133739,1816133719...1816133721,1816133740...1816133743,1816133722,1816133723,1816133744,1816133724,1816133725,1816133745,1816133726,1816133746,1816133747,1816133727,1816133748,1816133728,1816133749,1816133729,1816133730,1816133634,1816133633,1816133640,1816133635,1816133636,1816133641,1816133642,1816133637,1816133638,1816133643,1816133639,1816133644,1816133750,1816133751,1816133762...1816133764,1816133752,1816133765,1816133753,1816133754,1816133766,1816133755...1816133758,1816133767,1816133759,1816133768,1816133760,1816133761,1816133769...1816133772,1816133780...1816133782,1816133773...1816133775,1816133783,1816133776...1816133779,1816133645,1816133646,1816133652,1816133653,1816133647,1816133648,1816133651,1816133649,1816133663,1816133662,1816133664,1816133654...1816133657,1816133665,1816133666,1816133658...1816133660,1816133650,1816133661,1816133667,1816133698...1816133700,1816133692,1816133701,1816133693,1816133702,1816133696,1816133694,1816133695,1816133703,1816133697,1816133704,1816133705,1816133674,1816133678,1816133679,1816133675,1816133668,1816133669,1816133680,1816133681,1816133670,1816133671,1816133673,1816133676,1816133677,1816133682,1816133672,2092957699,2013265922&date=latest&variable=18,45,84,111,1493...1499&measures=20599,21001,21002,21003&select=date_name,geography_name,geography_code,variable_name,measures_name,obs_value,obs_status_name')
 
-Together with those who are officially unemployed (i.e. actively seeking work and available to start), it means that only 69.7% are ‘economic active’, which is the 2nd lowest rate in England (again not including the City of London or Scilly Isles). 
+mainemprates <- activitydata %>% filter(MEASURES_NAME == "Variable") %>% filter(VARIABLE_NAME == "Employment rate - aged 16-64") %>%
+  filter(GEOGRAPHY_CODE != "E09000001" & GEOGRAPHY_CODE != "E06000053" &
+           GEOGRAPHY_CODE != "E92000001" & GEOGRAPHY_CODE != "E12000002") %>% # not City, Scilly, England or NW
+  mutate(emprank = rank(OBS_VALUE))
+bwdemprate <- mainemprates %>% filter(GEOGRAPHY_CODE == "E06000008") %>% select(OBS_VALUE)
+bwdemprate <- as.numeric(bwdemprate)
+bwdemprank <- mainemprates %>% filter(GEOGRAPHY_CODE == "E06000008") %>% select(emprank)
+bwdemprank <- as.numeric(bwdemprank)
+bwdemprank <- toOrdinal(bwdemprank)
+bwdemprank <- ifelse(bwdemprank == "1st","",bwdemprank) # Don't want to say '1st lowest'
 
-(ref:activitycap) Economic activity and inactivity & employment rate<br/>(age 16-64, year ending March 2018) _[@Nomis]_
+mainactrates <- activitydata %>% filter(MEASURES_NAME == "Variable") %>% filter(VARIABLE_NAME == "Economic activity rate - aged 16-64") %>%
+       filter(GEOGRAPHY_CODE != "E09000001" & GEOGRAPHY_CODE != "E06000053" &
+              GEOGRAPHY_CODE != "E92000001" & GEOGRAPHY_CODE != "E12000002") %>% # not City, Scilly, England or NW
+       mutate(actrank = rank(OBS_VALUE))
+bwdactrate <- mainactrates %>% filter(GEOGRAPHY_CODE == "E06000008") %>% select(OBS_VALUE)
+bwdactrate <- as.numeric(bwdactrate)
+bwdactrank <- mainactrates %>% filter(GEOGRAPHY_CODE == "E06000008") %>% select(actrank)
+bwdactrank <- as.numeric(bwdactrank)
+bwdactrank <- toOrdinal(bwdactrank)
+bwdactrank <- ifelse(bwdactrank == "1st","",bwdactrank) # Don't want to say '1st lowest'
 
-```{r activitychart, fig.cap='(ref:activitycap)', echo=FALSE,out.width='60%', fig.align='center'}
-knitr::include_graphics("Assets/p7fig15.png")
+yearending <- substr(subset(mainactrates,GEOGRAPHY_CODE == "E06000008",select=DATE_NAME)$DATE_NAME,10,17)
+
+# Collating data for chart
+chartactivity <- activitydata %>% filter(GEOGRAPHY_CODE %in% c("E06000008","E92000001","E12000002")) # BwD, England or NW
+
+Employed <- chartactivity %>% filter(VARIABLE_NAME == "Employment rate - aged 16-64") %>% 
+     filter(MEASURES_NAME == "Variable") %>% mutate(VARIABLE_NAME = "Employed") %>% select(-MEASURES_NAME,-OBS_STATUS_NAME)
+
+Active <- chartactivity %>% filter(VARIABLE_NAME == "Economic activity rate - aged 16-64") %>% 
+  filter(MEASURES_NAME == "Variable") %>% mutate(VARIABLE_NAME = "Active") %>% select(-MEASURES_NAME,-OBS_STATUS_NAME)
+
+Inactive <- chartactivity %>% filter(VARIABLE_NAME == "Economic activity rate - aged 16-64") %>% 
+  filter(MEASURES_NAME == "Variable") %>% mutate(VARIABLE_NAME = "Inactive",inactive = 100 - OBS_VALUE) %>% 
+  select(-MEASURES_NAME,-OBS_STATUS_NAME, -OBS_VALUE) %>% rename(OBS_VALUE = inactive)
+
+Student <- chartactivity %>% filter(VARIABLE_NAME == "% of economically inactive student") %>% 
+  filter(MEASURES_NAME == "Variable") %>% mutate(VARIABLE_NAME = "Student") %>% select(-MEASURES_NAME,-OBS_STATUS_NAME)
+
+Looking_after_home <- chartactivity %>% filter(VARIABLE_NAME == "% of economically inactive looking after family/home") %>% 
+  filter(MEASURES_NAME == "Variable") %>% mutate(VARIABLE_NAME = "Looking_after_home") %>% select(-MEASURES_NAME,-OBS_STATUS_NAME)
+
+Long_term_sick <- chartactivity %>% filter(VARIABLE_NAME == "% of economically inactive long-term sick") %>% 
+  filter(MEASURES_NAME == "Variable") %>% mutate(VARIABLE_NAME = "Long_term_sick") %>% select(-MEASURES_NAME,-OBS_STATUS_NAME)
+
+UnempRate <- chartactivity %>% filter(VARIABLE_NAME == "Unemployment rate - aged 16-64 ") %>%
+  filter(MEASURES_NAME == "Variable") %>% mutate(VARIABLE_NAME = "UnempRate") %>% select(-MEASURES_NAME,-OBS_STATUS_NAME)
+
+reasons <- bind_rows(Employed,Student,Looking_after_home,Long_term_sick,Active,Inactive, UnempRate) %>%
+  spread(VARIABLE_NAME,OBS_VALUE) %>%
+  mutate(Unemployed = Active - Employed) %>%
+  mutate(Other = 100 - Student - Looking_after_home - Long_term_sick) %>%
+  mutate(Studentpc = Student*Inactive/100, Looking_after_homepc = Looking_after_home*Inactive/100,Long_term_sickpc = Long_term_sick*Inactive/100,
+         Otherpc = Other*Inactive/100) %>%
+  select(GEOGRAPHY_NAME,Active,Employed,Unemployed,Inactive,Long_term_sick = Long_term_sickpc, Looking_after_home = Looking_after_homepc, Student = Studentpc,
+         Other = Otherpc, UnempRate)
+reasons[4,] <- NA # Insert empty row to create more space at top of ggplot2 chart
+
+tidyreasons <- gather(reasons, key = 'subcat',value = 'pc',-GEOGRAPHY_NAME)
+tidyreasons$GEOGRAPHY_NAME <- factor(tidyreasons$GEOGRAPHY_NAME,levels = c("England","North West","Blackburn with Darwen"))
+tidyreasons  <- tidyreasons %>% mutate(GEOGRAPHY_NAME = fct_recode(GEOGRAPHY_NAME,
+                                                                   "BwD" = "Blackburn with Darwen",
+                                                                   "NW" = "North West"))
+levels(tidyreasons$GEOGRAPHY_NAME) <- c(levels(tidyreasons$GEOGRAPHY_NAME),"")
+tidyreasons$GEOGRAPHY_NAME[is.na(tidyreasons$GEOGRAPHY_NAME)] <- ""
+
+tidyreasons$subcat <- factor(tidyreasons$subcat, levels = c("Employed","Unemployed",
+                                  "Long_term_sick","Looking_after_home","Student","Other","Active","Inactive","UnempRate"))
+tidyreasons <- tidyreasons %>% mutate(subcat = fct_recode(subcat,
+                              "Long-term sick"    = "Long_term_sick",
+                              "Looking after home"      = "Looking_after_home"
+  ))
+```
+As seen in Figure \@ref(fig:activitychart), an estimated `r bwdemprate`% of the borough’s residents aged 16-64 are employed _[@Nomis]_. This is the `r bwdemprank` lowest rate out of 150 upper tier local authorities (not including the City of London and Scilly Isles).
+
+Together with those who are officially unemployed (i.e. actively seeking work and available to start), it means that only `r bwdactrate`% are ‘economically active’, which is the `r bwdactrank` lowest rate in England (again not including the City of London or Scilly Isles). 
+
+(ref:activitycap) _(interactive)_ Economic activity & employment rate<br/>(age 16-64, year ending `r yearending`) _[@Nomis]_
+
+```{r activitychart, fig.cap='(ref:activitycap)', echo=FALSE,message = FALSE, out.width='100%', fig.align='center'}
+# knitr::include_graphics("Assets/p7fig15.png")
+# plotly chart
+truereasons <- reasons %>% filter(!is.na(GEOGRAPHY_NAME))
+truereasons$GEOGRAPHY_NAME <- factor(truereasons$GEOGRAPHY_NAME,levels = c("England","North West","Blackburn with Darwen"))
+levels(truereasons$GEOGRAPHY_NAME)[levels(truereasons$GEOGRAPHY_NAME)=="Blackburn with Darwen"] <- "Blackburn<br>with Darwen"
+truereasons$EmpHover <- paste0("Employed: ",sprintf(truereasons$Employed, fmt = "%#.1f"),"%")
+truereasons$UnempHover <- paste0("Unemployed: ",sprintf(truereasons$Unemployed, fmt = "%#.1f"),"%\n",
+          "<i>(i.e. Unemployment Rate = \n", sprintf(truereasons$UnempRate, fmt = "%#.1f"),"% of Economically Active)</i>")
+truereasons$SickHover <- paste0("Long-term sick: ",sprintf(truereasons$Long_term_sick, fmt = "%#.1f"),"%")
+truereasons$HouseHover <- paste0("Looking after home: ",sprintf(truereasons$Looking_after_home, fmt = "%#.1f"),"%")
+truereasons$StudHover <- paste0("Student: ",sprintf(truereasons$Student, fmt = "%#.1f"),"%")
+truereasons$OthHover <- paste0("Other: ",sprintf(truereasons$Other, fmt = "%#.1f"),"%")
+truereasons$ActiveAnno <- paste0("<b>Active: ",sprintf(truereasons$Active, fmt = "%#.1f"), "%</b>")
+truereasons$EmpAnno <- paste0("<b>&nbsp;<br>",truereasons$EmpHover,"</b>")
+truereasons$UnempAnno <- paste0("<b>&nbsp;",sprintf(" %#.1f%%",truereasons$Unemployed),"</b>")
+truereasons$SickAnno <- paste0("<b>&nbsp;",sprintf(" %#.1f%%",truereasons$Long_term_sick),"</b>")
+truereasons$HouseAnno <- paste0("<b>&nbsp;",sprintf(" %#.1f%%",truereasons$Looking_after_home),"</b>")
+truereasons$StudAnno <- paste0("<b>&nbsp;",sprintf(" %#.1f%%",truereasons$Student),"</b>")
+truereasons$OtherAnno <- paste0("<b>&nbsp;",sprintf(" %#.1f%%",truereasons$Other),"</b>")
+
+m <- list(l = 100,
+               r = 50,
+               b = 60,
+               t = 60,
+               pad = 4)
+
+p <- plot_ly(truereasons, y = ~GEOGRAPHY_NAME ) %>%
+  add_trace(x = ~Employed, type = "bar", 
+               marker = list(color = "rgb(255,102,255)"), name = 'Active - Employed', 
+               legendgroup = 'group1',orientation = 'h',text = ~EmpHover,hoverinfo = "text") %>%
+  add_trace(x = ~Unemployed,type = "bar",name = "Active - Unemployed", text = ~UnempHover,hoverinfo = "text",
+            legendgroup = 'group1',marker = list(color = "rgb(255,187,255)")) %>%
+  add_trace(x = ~Long_term_sick,type = "bar",name = "Inactive - Long-term sick",text = ~SickHover,hoverinfo = "text",
+            legendgroup = 'group2',marker = list(color = "rgb(39,64,139)")) %>%
+  add_trace(x = ~Looking_after_home,type = "bar",name = "Inactive - Looking after home",text = ~HouseHover,hoverinfo = "text",
+            legendgroup = 'group2',marker = list(color = "rgb(67,110,238)")) %>%
+  add_trace(x = ~Student,type = "bar",name = "Inactive - Student", text = ~StudHover,hoverinfo = "text",
+            legendgroup = 'group2',marker = list(color = "rgb(92,172,238)")) %>%
+  add_trace(x = ~Other,type = "bar",name = "Inactive - Other", text = ~OthHover,hoverinfo = "text",
+            legendgroup = 'group2',marker = list(color = "rgb(176,224,230)")) %>%
+  
+  # Horizontal line to give width to arrows
+  add_segments(x = ~Active - 1,y = ~GEOGRAPHY_NAME,xend = 1,yend = ~GEOGRAPHY_NAME, color = I('black'),
+               line = list(width = 4),showlegend = FALSE, hoverinfo = "none") %>% # leave 1 pc space at either end 
+                                                              # to avoid showing through behind arrow
+  # Arrows pointing right and left
+  add_annotations(x = ~Active,y = ~GEOGRAPHY_NAME,ax = 0,ay = 0, xref = "x",yref = "y",axref = "x",
+                  text = "", size = 3, color = I('black'),showarrow = TRUE, arrowhead = 3, arrowsize = 1.5) %>%
+  add_annotations(x = 0,y = ~GEOGRAPHY_NAME,ax = ~Active,ay = 0, xref = "x",yref = "y",axref = "x",
+                  text = "", size = 3, color = I('black'),showarrow = TRUE, arrowhead = 3, arrowsize = 1.5) %>%
+  
+  # Text above arrows
+  add_annotations(x = ~Active/2, y = ~GEOGRAPHY_NAME, xref = "x",yref = "y",text = ~ActiveAnno, xanchor = "center",
+                  yanchor = "bottom",showarrow = FALSE, font=list(size = 16, face = 'bold')) %>%
+  
+  # Text below arrows
+  add_annotations(x = ~Employed/2,y = ~GEOGRAPHY_NAME,xref = "x",yref = "y", text = ~EmpHover, xanchor = "center",
+                  yanchor = "top",ypad = 10, showarrow = FALSE, font = list(size = 16,color = "white")) %>%
+  
+  layout(margin = m,xaxis = list(title = "",ticksuffix = "%",tickfont = list(size = 16), zeroline=FALSE),
+         yaxis = list(title = "",tickfont = list(size = 18)),barmode = 'stack',
+         legend = list(orientation = 'h',xanchor = "center",
+                       x = 0.5,font = list(size = 14),traceorder = "grouped"))
+  
+p
 ```
 
 ### Looking for Work
 #### Unemployment
-Strictly speaking, unemployment is defined by whether people are actively seeking work and available to start, rather than by any benefits they may be claiming. This can only be ascertained from a sample survey, so the estimates for an area such as Blackburn with Darwen are subject to large confidence intervals (Figure \@ref(fig:unempchart)). The latest results (for April 2017 – March 2018) suggest that there are approximately 4000 unemployed people of working age in Blackburn with Darwen. It is conventional to express this as a percentage of the economically active population, which gives a rate of 6.3%.
+```{r echo = FALSE, warning = FALSE, message = FALSE}
+unemp <- read.csv("http://www.nomisweb.co.uk/api/v01/dataset/NM_17_5.data.csv?geography=1816133645,2092957699,2013265922&date=latestMINUS56,latestMINUS52,latestMINUS48,latestMINUS44,latestMINUS40,latestMINUS36,latestMINUS32,latestMINUS28,latestMINUS24,latestMINUS20,latestMINUS16,latestMINUS12,latestMINUS8,latestMINUS4,latest&variable=84&measures=20599,21001,21002,21003&select=date_name,geography_name,geography_code,variable_name,measures_name,obs_value")
+monthend <- substr(as.character(first(unemp$DATE_NAME)),10,12) # i.e. data is for 12 months to this month each year
+unemp <- unemp %>% mutate(year = as.numeric(substr(DATE_NAME,14,17)))
+BwDcount <- unemp %>% filter(GEOGRAPHY_NAME == "Blackburn with Darwen" & MEASURES_NAME == "Numerator" & year == max(year)) %>% select(OBS_VALUE) %>% pull()
+BwDrate <- unemp %>% filter(GEOGRAPHY_NAME == "Blackburn with Darwen" & MEASURES_NAME == "Variable" & year == max(year)) %>% select(OBS_VALUE) %>% pull()
+latestyear <- unemp %>% filter(year == max(year)) %>% distinct(year)
+BwDconf <- unemp %>% filter(MEASURES_NAME == "Confidence" & GEOGRAPHY_NAME == "Blackburn with Darwen") # only want CIs for BwD, not NW or England
 
-(ref:unempcap) Unemployment rate (age 16-64),<br/>Blackburn with Darwen, North West and England<br/><em>(showing 95% confidence intervals for BwD)[@Nomis]</em>
+unemp <- unemp %>% filter(MEASURES_NAME == "Variable") %>% select(GEOGRAPHY_NAME,OBS_VALUE,year) %>% spread(key = GEOGRAPHY_NAME, value = OBS_VALUE) %>%
+  left_join(BwDconf, by=c('year'='year')) %>% select(year,BwD = `Blackburn with Darwen`,England,NW = `North West`,BwDconf = OBS_VALUE)
+```
+Strictly speaking, unemployment is defined by whether people are actively seeking work and available to start, rather than by any benefits they may be claiming. This can only be ascertained from a sample survey, so the estimates for an area such as Blackburn with Darwen are subject to large confidence intervals (Figure \@ref(fig:unempchart)). The latest results (for the twelve months to `r monthend` `r latestyear`) suggest that there are approximately `r BwDcount` unemployed people of working age in Blackburn with Darwen. It is conventional to express this as a percentage of the economically active population, which gives a rate of `r BwDrate`%.
 
-```{r unempchart, fig.cap='(ref:unempcap)', echo=FALSE,out.width='60%', fig.align='center'}
-knitr::include_graphics("Assets/p8fig16.png")
+(ref:unempcap) _(interactive)_ Unemployment rate (age 16-64),<br/>Blackburn with Darwen, North West and England<br/><em>(showing 95% confidence intervals for BwD)[@Nomis]</em>
+
+```{r unempchart, fig.cap='(ref:unempcap)', echo=FALSE,warning = FALSE, message = FALSE, out.width='100%', fig.align='center'}
+#knitr::include_graphics("Assets/p8fig16.png")
+m <- list(
+  l = 100,
+  r = 180,
+  b = 50,
+  t = 90,
+  pad = 4
+)
+
+p <- plot_ly(unemp,x = ~year) %>%
+  add_trace(y = ~BwD,line = list(color = "blue",width = 3),marker = list(size = 8, color = "Blue"),
+                      type = 'scatter', mode = 'lines+markers',
+                      hoverinfo = 'text',name = "Blackburn with Darwen",
+                      text = ~ paste("<b>BwD </b>, year to ",monthend," <b>",year,"</b><br />","Unemployment rate: <b>",round(BwD,1),'%</b>',""),
+                      error_y = list(array = ~BwDconf,type = "bar", color = "blue", thickness = 1, opacity = 0.5)) %>%
+  add_trace(y = ~NW,line = list(color = "red",width = 2),marker = list(size = 6, color = "red"),
+            type = 'scatter', mode = 'lines+markers',
+            hoverinfo = 'text',name = "North West",
+            text = ~ paste("<b>NW </b>, year to ",monthend," <b>",year,"</b><br />","Unemployment rate: <b>",round(NW,1),'%</b>',"")) %>%
+  add_trace(y = ~England,line = list(color = "green",width = 2),marker = list(size = 6, color = "green"),
+            type = 'scatter', mode = 'lines+markers',
+            hoverinfo = 'text',name = "England",
+            text = ~ paste("<b>England </b>, year to ",monthend," <b>",year,"</b><br />","Unemployment rate: <b>",round(England,1),'%</b>',"")) %>%
+  layout(margin = m,title = "", xaxis = list(title = "",dtick=1,tickfont = list(size = 15)), 
+         yaxis = list(rangemode = 'tozero',title = "", ticksuffix = "%",tickfont = list(size = 15)),
+         legend = list(x = 0.1,y=0.1,font = list(size = 15)))
+p          
 ```
 
 #### Claimant Count
@@ -368,7 +725,7 @@ nomisdata <- within(nomisdata,{
   MEASURE_NAME[MEASURE_NAME == "Claimant count"] <- "count"
 })
 
-nomisdata <- cast(nomisdata,DATE_NAME+DATE_SORTORDER+GEOGRAPHY_NAME~MEASURE_NAME) # Now has 'count' and 'rate' as separate columns
+nomisdata <- nomisdata %>% spread(key = MEASURE_NAME,value = OBS_VALUE) # Now has 'count' and 'rate' as separate columns
 
 bwdLatest <- nomisdata[which(nomisdata$DATE_SORTORDER == max(nomisdata$DATE_SORTORDER) & nomisdata$GEOGRAPHY_NAME == "Blackburn with Darwen"),]
 bwdLatestCount <- bwdLatest$count
@@ -380,7 +737,7 @@ The Claimant Count now consists of the (diminishing) number of people still on J
 
 (ref:claimcountcap) _(interactive)_ Claimant Count as a % of residents aged 16-64 _[@Nomis]_
 
-```{r claimcountchart, fig.cap='(ref:claimcountcap)', echo = FALSE, warning = FALSE, message = FALSE, fig.align='center'}
+```{r claimcountchart, fig.cap='(ref:claimcountcap)', echo = FALSE, warning = FALSE, message = FALSE, fig.align='center',out.width='100%'}
 #knitr::include_graphics("Assets/p8fig17.png")
 
 pal <- c("red","blue","green")
@@ -395,8 +752,8 @@ yx <- list(
 )
 
 m <- list(
-  l = 50,
-  r = 50,
+  l = 40,
+  r = 170, # make this large so tooltips show on right
   b = 120,
   t = 60,
   pad = 4
@@ -423,12 +780,36 @@ However, **Figure \@ref(fig:claimcountchart) must be interpreted with caution**.
 Judging by Figure \@ref(fig:claimcountchart), it might be thought that the Blackburn with Darwen economy has taken a turn for the worse since February 2018. However, that is not necessarily the case, because in February 2018, the borough became a **‘Full Service’** area for Universal Credit.^[‘Full Service’ means that Universal Credit is available to all types of new claimants, rather than being restricted (as before) to those whose claims are relatively simple.]  More people are required to seek work under Universal Credit than under the legacy benefits that it replaces, so the recent sharp rise in the Claimant Count may well reflect the fact that the ‘goalposts’ have moved. A similar sharp rise was seen in areas which moved to Full Service last year (2017) _[@HCL_unemp]_.
 
 ##### Claimant Count Across the Borough
-The fact that it is difficult to interpret the _trend_ in the Claimant Count does not prevent us from looking at how it varies _across the Borough_ at a snapshot in time. Figure \@ref(fig:claimmap) shows how the rate as at August 2018 ranged from 0.3% in North Turton with Tockholes, to 8.2% in Wensley Fold.
+```{r echo = FALSE, warning = FALSE, message = FALSE,results = 'hide'}
+claimants <- read.csv("http://www.nomisweb.co.uk/api/v01/dataset/NM_162_1.data.csv?geography=1245710832...1245710849&date=latest&gender=0&age=0&measure=1&measures=20100&select=date_name,geography_name,geography_code,gender_name,age_name,measure_name,obs_value")
+pop <- read.csv("http://www.nomisweb.co.uk/api/v01/dataset/NM_2010_1.data.csv?geography=1245710832...1245710849&date=latest&gender=0&c_age=203&measures=20100&select=date_name,geography_name,geography_code,gender_name,c_age_name,obs_value")
 
-(ref:claimmapcap) Claimant Count rates at ward level, August 2018,<br/>as a % of residents aged 16-64<br/><em>(pre-2018 wards) [@Nomis]</em>
+popyear <- pop %>% distinct(DATE_NAME)
+claimmonth <- claimants %>% distinct(DATE_NAME)
+  
+MSOAs <- st_read("F:/R Programming/Misc work/MSOA DFLE and HLE/MSOA Blackburn_region.shp")
 
-```{r claimmap, fig.cap='(ref:claimmapcap)', echo=FALSE,out.width='60%', fig.align='center'}
-knitr::include_graphics("Assets/p8fig18.png")
+claimants <- select(claimants,GEOGRAPHY_CODE,claimants = OBS_VALUE)
+pop <- select(pop,GEOGRAPHY_CODE,pop = OBS_VALUE)
+
+MSOAs <- MSOAs %>% left_join(claimants, by = c("MSOA_CODE"="GEOGRAPHY_CODE"))
+MSOAs <- MSOAs %>% left_join(pop,by = c("MSOA_CODE"="GEOGRAPHY_CODE"))
+MSOAs <- MSOAs %>% mutate(rate = claimants/pop*100)
+```
+The fact that it is difficult to interpret the _trend_ in the Claimant Count does not prevent us from looking at how it varies _across Blackburn with Darwen_ at a snapshot in time. Figure \@ref(fig:claimmap) shows how the rate as at `r claimmonth` ranged from `r round(min(MSOAs$rate))`% to `r round(max(MSOAs$rate))`% across the Borough's 18 Middle Super Output Areas (MSOAs).
+
+(ref:claimmapcap) _(interactive)_ Claimant Count rates at MSOA level, `r claimmonth`,<br/>as a % of residents aged 16-64<br/><em>(using mid-`r popyear` population estimates) [@Nomis]</em>
+
+```{r claimmap, fig.cap='(ref:claimmapcap)', echo=FALSE,message = FALSE, warning = FALSE,out.width='100%', fig.align='center'}
+#knitr::include_graphics("Assets/p8fig18.png")
+plot_ly(MSOAs,split = ~MSOA_CODE,
+        line = list(width = 1, color = "lightgray"),
+        color = ~rate,colors = "PuRd",alpha = 1,
+        hoveron = "fills",hoverinfo="text",type = "scatter",mode = "lines",
+        text = ~paste("MSOA: ",MSOA_CODE,"\nClaimant count: <b>",claimants,"</b>\nClaimant count rate: <b>",round(rate,1),"%</b>")) %>%
+        colorbar(title= "Claimant\nCount\nRate",tickfont = list(size = 18),titlefont = list(size = 20),ticksuffix = "%",
+                 lenmode = "fraction",len = 0.8)%>%
+hide_legend() 
 ```
 
 ### Employment by Sector
@@ -516,11 +897,11 @@ p <- plot_ly(mainearnings,x = ~GEOGRAPHY_NAME,y = ~earnings,
     add_trace(y = ~NWearnings,type = "scatter", mode = "lines",line = list(color = "Red")) %>%
     
     add_annotations(xref = "paper",yref = "y",x = 1,y = Englandearnings,xanchor = "right",yanchor = "bottom",
-                    text = paste0("England: ",sprintf("£%.2f", Englandearnings),sep=""),
-                    showarrow = F, font = list(color = "Green", size = 12)) %>%
+                    text = paste0("England: ",sprintf("<b>£%.2f</b>", Englandearnings),sep=""),
+                    showarrow = F, font = list(color = "Green", size = 14)) %>%
     add_annotations(xref = "paper",yref = "y",x = 1,y = NWearnings,xanchor = "right",yanchor = "top",
-                    text = paste0("North West: ",sprintf("£%.2f", NWearnings),sep=""),
-                    showarrow = F, font = list(color = "Red", size = 12)) %>%
+                    text = paste0("North West: ",sprintf("<b>£%.2f</b>", NWearnings),sep=""),
+                    showarrow = F, font = list(color = "Red", size = 14)) %>%
   
     layout(margin = m, showlegend = FALSE,bargap = 0, 
     xaxis = list(title = "", showspikes = TRUE, showticklabels = FALSE,
@@ -531,11 +912,11 @@ p
 
 ### Household Income
 #### Gross Disposable Household Income
-Gross Disposable Household Income (GDHI) is the amount of money that individuals in households have available for spending after taxes and benefits. Provisional estimates for 2016 are now available by local authority _[@ONS_grossdisp]_.  
+Gross Disposable Household Income (GDHI) is the amount of money that individuals in households have available for spending after taxes and benefits. Provisional estimates for 2017 are now available by local authority _[@ONS_grossdisp]_.  
 
-The Blackburn with Darwen average of £12,450 per head is the 2nd lowest in the UK (after Nottingham), and the lowest in the North West. It compares with an England average of £19,878. Blackburn with Darwen has consistently been in 2nd or 3rd lowest place for the past six years.
+The Blackburn with Darwen average of £12,623 per head is the 3rd lowest in the UK (after Nottingham and Leicester), and the lowest in the North West. It compares with an England average of £19,988. Blackburn with Darwen has consistently been in 2nd or 3rd lowest place for the past seven years.
 
-(ref:dispinccap) Gross Disposable Household Income per head (2016, provisional): <br/>lowest and highest local authority per region
+(ref:dispinccap) Gross Disposable Household Income per head (2017, provisional): <br/><span style='color:red'>lowest</span> and <span style='color:blue'>highest</span> local authority per region
 
 ```{r dispincchart, fig.cap='(ref:dispinccap)', echo=FALSE,out.width='90%', fig.align='center'}
 knitr::include_graphics("Assets/p10fig22.png")
@@ -557,57 +938,69 @@ knitr::include_graphics("Assets/p10fig23.png")
 ## Safe and Healthy Homes\
 and Neighbourhoods
 ### Housing
+```{block2, type = 'newstuff'}
+This section contains updated material 
+&nbsp;
+<div style="text-align: right;font-size:80%;"><em>[‘Sparkling’](https://thenounproject.com/term/sparkling/1200272) icon by Morten Halvorsen from [The Noun Project](https://thenounproject.com)</em></div>
+```
+
 #### Private Rented Sector
 >“The private-rented sector in the UK is growing and has worse housing conditions than any other sector.”
 >
 > --- Parliamentary Office of Science & Technology _[POST]_
 
 ##### Housing Conditions
-Evidence from the English Housing Survey shows that the private rented sector nationally has the highest rate of serious (‘Category 1’) hazards, including excess cold and risk of falls (Figure \@ref(fig:housecondchart)) _[@POST2018]_. Private rented housing was also the most likely to be old, to be non-decent (a broader classification, including problems of disrepair and ageing facilities), and to be suffering from damp _[@POST2018; @MHCLG2018]_.
+Evidence from the English Housing Survey shows that the private rented sector nationally has the highest rate of serious (‘Category 1’) hazards, the highest proportion of houses with poor energy efficiency ratings, and the highest prevalence of damp (Figure \@ref(fig:housecondchart)) _[@DEBATE2019]_. Private rented housing was also the most likely to be old, to be non-decent (a broader classification, including problems of disrepair and ageing facilities), and to be suffering from damp _[@POST2018; @MHCLG2018]_.
 
-(ref:housecondcap) National findings from the English Housing Survey (2015) <em>[@POST2018]</em><br/><em>('HHARS' = Housing Health and Safety Rating System)</em>
+(ref:housecondcap) National findings from the English Housing Survey (2017) <em>[@DEBATE2019]</em><br/><em>('EPC' = 'Energy Performance Certificate')</em>
 
 ```{r housecondchart, fig.cap='(ref:housecondcap)', echo=FALSE,out.width='60%', fig.align='center'}
 knitr::include_graphics("Assets/p11fig24.png")
 ```
 
 ##### Local Market
-Modelled estimates (which ONS stress are _not_ official statistics) suggest that Blackburn with Darwen had approximately 8500 privately rented houses in 2012, and 1000 more by 2015 _[@ONS_tenure]_.  Data from the Valuation Office Agency (VOA) shows that median private-sector rents in Blackburn with Darwen (and in Burnley, Pendle and Hyndburn) in the year to March 2018 were in the bottom 15 nationally, and the rental for a non-self-contained room in Blackburn with Darwen was the lowest in the NW _[@VOA2018]_.
+Modelled estimates (which ONS stress are _not_ official statistics) suggest that Blackburn with Darwen had approximately 8875 privately rented houses in 2017 _[@ONS_tenure]_.  Data from the Valuation Office Agency (VOA) shows that median private-sector rents in Blackburn with Darwen were the 16th lowest in England in 2018-19. The rental for a non-self-contained room was the lowest in the NW _[@VOA2019]_.
 
 ##### Regulation
-Multi-tenanted ‘Houses in Multiple Occupation’ (HMOs) often house some of the most vulnerable people in society. Since 2004, large HMOs of three storeys or more have had to be licensed (Figure \@ref(fig:hmomap)). New legislation means that many more HMOs will require to be licensed from October 2018.
+‘Houses in Multiple Occupation’ (HMOs) often house some of the most vulnerable people. Since October 2018, mandatory licensing applies to any rented property occupied by 5+ unrelated people, sharing facilities such as a kitchen, toilet or bathroom (Figure \@ref(fig:hmomap)). 
 
-Councils can also impose a selective licensing scheme for private rented housing more generally, in areas of low demand. Such areas may be suffering from problems such as high turnover, high levels of disrepair, and anti-social behaviour. Blackburn with Darwen currently has two such schemes, one in Darwen and one in the Infirmary area of Blackburn (Figure \@ref(fig:hmomap)), and finds them to be an effective tool for driving up housing standards and reversing neighbourhood decline _[@BwD_Infirmary; @BwD_Darwen]_.
+Selective licensing schemes for private rented housing can be an effective tool for driving up standards and reversing neighbourhood decline in areas of low demand. Blackburn with Darwen has one such scheme in Darwen, and one in the Infirmary area of Blackburn (Figure \@ref(fig:hmomap)) _[@BwD_Infirmary; @BwD_Darwen]_.
 
 ```{r hmomap, fig.cap='Licensed HMOs & Selective Licensing Areas in BwD', echo = FALSE, out.width = '60%', fig.align='center'}
 knitr::include_graphics("Assets/p11fig25.png")
 ```
 
 ##### Cold housing and Fuel Poverty
-As well as being a major contributor to excess winter deaths, cold housing adds to the burden of circulatory and respiratory disease, colds and flu, exacerbates chronic conditions such as rheumatism and arthritis, and has a negative effect upon mental health across all age-groups _[@MRT2011]_.  
+As well as being a major contributor to excess winter deaths, cold housing adds to the burden of circulatory and respiratory disease, colds and flu, exacerbates chronic conditions such as rheumatism and arthritis, and has a negative effect upon mental health _[@MRT2011]_.  
 
-An estimated 8554 households in Blackburn with Darwen were classed as being in ‘fuel poverty’ in 2016. These are only modelled estimates, but they seem to be going up rather than down (from 8162 in 2015, and 7232 in 2014). At 14.4% of households (compared with 11.1% for England as a whole, and 12.8% for the NW), Blackburn with Darwen ranks 21st highest out of 326 districts in England _[@DBEIS2018a; @DBEIS2018b]_.
+An estimated 9895 households in Blackburn with Darwen (16.5%) were classed as being in ‘fuel poverty’ in 2017, putting it 6th highest (England 10.9%, North West 13.1%). Figure \@ref(fig:fuelpovchart) shows how these estimates vary across the borough _[@DBEIS2019a; @DBEIS2019b]_. However, ONS is now suggesting a different estimation method, which would put Blackburn with Darwen on 15.2%, or 23rd in the country _[@ONS_newFP]_. This is ‘experimental’ at the moment, but may become official in future.
 
-A Government target aims to raise as many fuel-poor homes as possible to energy efficiency Band C by 2030, but research by the IPPR think-tank suggests that this will be missed by more than half a century _[@Gdn_fuel]_.  Blackburn with Darwen does its best to promote energy efficiency and available grants via initiatives such as its ‘Heat and Eat’ events _[@Sh_HeatEat]_.
-
-(ref:fuelpovcap) Households in Fuel Poverty, 2016 (modelled estimates)<br/><em>Lower Super Output Areas overlaid with new (2018) wards</em>
+(ref:fuelpovcap) Households in Fuel Poverty, 2017 (modelled estimates)<br/><em>Lower Super Output Areas overlaid with wards, Source BEIS</em>
 
 ```{r fuelpovchart, fig.cap='(ref:fuelpovcap)', echo=FALSE,out.width='50%', fig.align='center'}
-knitr::include_graphics("Assets/p11fig26.png")
+knitr::include_graphics("Assets/FP.png")
+```
+
+Blackburn with Darwen does its best to promote energy efficiency and available grants via initiatives such as its ‘Heat and Eat’ events _[@HeatEat]_, and marked Fuel Poverty Awareness Day by holding ‘Blackburn with Darwen’s Biggest Housewarming’ event (Figure \@ref(fig:housewarm)) _[@HouseWarm]_.
+
+(ref:housewarmcap) Blackburn with Darwen's "Biggest Housewarming Event"<br /><em>(Fuel Poverty Awareness Day, 2019)</em>
+
+```{r housewarm, fig.cap='(ref:housewarmcap)', echo = FALSE, out.width = '60%', fig.align='center'}
+knitr::include_graphics("Assets/housewarm.png")
 ```
 
 ### Crime and Violence
 #### Crime and Antisocial Behaviour
-Data about the type and whereabouts of every recorded incident of crime or antisocial behaviour is available from http://data.police.uk/. In Figure \@ref(fig:crimemaps), the darkest pink shading denotes the areas with the greatest number of incidents in the year to December 2017.^[All recorded crime figures have to be treated with caution, as they do not currently meet the standards required for National Statistics status.]
+Data about the type and whereabouts of every recorded incident of crime or antisocial behaviour is available from http://data.police.uk/. In Figure \@ref(fig:crimemaps), the darkest pink shading denotes the areas with the greatest number of incidents in the year to December 2018.^[All recorded crime figures have to be treated with caution, as they do not currently meet the standards required for National Statistics status.]
 
-(ref:crimecap) Locations of recorded Crime and Antisocial Behaviour (January - December 2017)<br/><em>Only includes crimes with a recorded type and location, and hexagons lying entirely within BwD</em>
+(ref:crimecap) Locations of recorded Crime and Antisocial Behaviour (January - December 2018)<br/><em>Only includes crimes with a recorded type and location, and hexagons lying entirely within BwD</em>
 
 ```{r crimemaps, fig.cap='(ref:crimecap)', echo=FALSE,out.width='100%', fig.align='center'}
-knitr::include_graphics("Assets/p12fig27.png")
+knitr::include_graphics("Assets/Crime_hex_maps_narrower.png")
 ```
 
 #### Violent and Sexual Offences
-The Public Health Outcomes Framework _[@PHE_PHOF]_ monitors the rate of violent crime and the rate of sexual offences. In 2016/17, both rates were higher than average in Blackburn with Darwen. They were also both rising, but this was the case in almost every district across England. The borough also had the 16th highest rate of hospital admissions for violence in 2014/15 – 2016/17. However, this indicator is generally high across the urban NW, and Blackburn with Darwen is no longer any worse than the region as a whole.
+The Public Health Outcomes Framework _[@PHE_PHOF]_ monitors the rate of violent crime and the rate of sexual offences. In 2017/18, both rates were higher than average in Blackburn with Darwen. They were also both rising, but this was the case in every NW district. Public Health England does not feel it is appropriate to rag-rate these indicators, as high or low levels could be due to high or low levels of recording. The borough also had the 18th highest rate nationally of hospital admissions for violence in 2015/16 – 2017/18.
 
 ### Fast Food Outlets
 #### Number and density

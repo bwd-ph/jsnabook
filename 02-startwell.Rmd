@@ -61,6 +61,7 @@ knitr::include_graphics("Assets/p17fig35.png")
 
 ## Vulnerable Children\
 and Young People
+
 ### Children in Need
 **‘Children in Need’** is the DfE’s term for all those referred to the local authority and assessed to be in need of services. Blackburn with Darwen had a total of 1781 Children in Need at the end of March 2017, compared with 1617 two years previously. This equates to 464 per 10,000, against an average of 372 in the NW and 330 for England, putting Blackburn with Darwen just within the highest 20 authorities _[@DfE_Need]_.
 
@@ -121,24 +122,229 @@ knitr::include_graphics("Assets/p19fig40.png")
 ```
 
 ### Child Obesity and Underweight
-Figure \@ref(fig:NCMPchart) shows the results of the latest National Child Measurement Programme (NCMP) survey in 2016/17 _[@PHE_NCMP]_.  Most of Blackburn with Darwen’s results are fairly close to average.
+```{block2, type = 'newstuff'}
+This section contains updated material 
+&nbsp;
+<div style="text-align: right;font-size:80%;"><em>[‘Sparkling’](https://thenounproject.com/term/sparkling/1200272) icon by Morten Halvorsen from [The Noun Project](https://thenounproject.com)</em></div>
+```
+Figure \@ref(fig:NCMPchart) shows the results of the latest National Child Measurement Programme (NCMP) survey in 2017/18 _[@PHE_NCMP]_.  Most of Blackburn with Darwen’s results are fairly close to average, but that is no reason for complacency when over a third of children in Year 6 (both locally and nationally) are above a healthy weight.
 
-```{r NCMPchart, fig.cap='National Child Measurement Programme 2016-17', echo = FALSE, out.width = '60%', fig.align='center'}
-knitr::include_graphics("Assets/p20fig41.png")
+```{r NCMPchart, fig.cap='_(interactive)_ National Child Measurement Programme 2017-18', echo = FALSE, message = FALSE, warning = FALSE,out.width = '100%', fig.align='center'}
+# knitr::include_graphics("Assets/p20fig41.png")
+# Pull off latest data for underweight, healthy weight, overweight, obese (inc severely obese), severely obese, for Reception and Year 6
+BwDData <- fingertips_data(IndicatorID = c(90316,90317,92464,90319,93194,90320,90321,92465,90323,93195),AreaTypeID = 102,AreaCode = "E06000008",ProfileID = 32,categorytype = TRUE) %>% 
+  filter(is.na(CategoryType),Sex == "Persons",TimeperiodSortable == max(TimeperiodSortable))
+NWData <- fingertips_data(IndicatorID = c(90316,90317,92464,90319,93194,90320,90321,92465,90323,93195),AreaTypeID = 6,AreaCode = "E12000002",ProfileID = 32,categorytype = TRUE) %>% 
+  filter(is.na(CategoryType),Sex == "Persons",TimeperiodSortable == max(TimeperiodSortable)) 
+EngData <- fingertips_data(IndicatorID = c(90316,90317,92464,90319,93194,90320,90321,92465,90323,93195),AreaTypeID = 102,AreaCode = "E92000001",ProfileID = 32,categorytype = TRUE) %>% 
+  filter(is.na(CategoryType),Sex == "Persons",TimeperiodSortable == max(TimeperiodSortable)) 
+
+allData <- bind_rows(BwDData,NWData,EngData)
+latestyear <- max(allData$Timeperiod)
+allData <- allData %>% mutate(IndicatorName = ifelse(substr(IndicatorName,1,6) == "Year 6",substring(IndicatorName,23),substring(IndicatorName,26))) %>%
+  mutate(Area = ifelse(AreaName == "Blackburn with Darwen","BwD",ifelse(AreaName == "North West region","North West","England"))) %>%
+  select(IndicatorName,Area,Age,Value)
+
+allData <- allData %>% spread(IndicatorName,Value) %>% mutate(merelyobese = `obesity (including severe obesity)` - `severe obesity`)  %>%
+  select(Area,Age,underweight,healthyweight = `healthy weight`,overweight,merelyobese,severelyobese = `severe obesity`) %>%
+  gather("category","PC",3:7)
+
+allData$category <- factor(allData$category, levels = c("underweight","healthyweight","overweight","merelyobese","severelyobese"))
+allData <- allData %>% mutate(opacity = as.numeric(category)/5) 
+pal <- c('blue','green','red')
+allData <- allData %>% mutate(color = factor(Area,labels = pal)) %>%     
+  mutate(colshade = paste(color,opacity)) %>% 
+  mutate(colshade = factor(colshade)) %>%
+  mutate(catlabel = category)
+
+levels(allData$catlabel) <- list("Underweight" = "underweight","Healthy Weight" = "healthyweight","Overweight" = "overweight",
+                                 "Obese\n(not severe)" = "merelyobese","Severely Obese" = "severelyobese")
+
+# Palette is blue, green and red, each at five different transparencies (see https://gist.github.com/lopspower/03fb1cc0ac9f32ef38f4)
+
+pal <- c("#0000FF33","#0000FF66","#0000FF99","#0000FFBF","#0000FFFF",
+         "#008b0033","#008b0066","#008b0099","#008b00BF","#008b00FF",
+         "#FF000033","#FF000066","#FF000099","#FF0000BF","#FF0000FF")
+
+m <- list(
+  l = 40,
+  r = 170,
+  b = 60,
+  t = 80,
+  pad = 4
+)
+
+reception <- allData %>% filter(Age == "4-5 yrs")
+
+p1 <- plot_ly(reception) %>% 
+  add_trace(type = "bar", x = ~Area, y = ~PC, color = ~colshade, colors = pal,
+            text = ~ paste(catlabel,": ",round(PC,1),"%"),hoverinfo = "text") %>%  
+  layout(barmode = "stack",
+         xaxis = list(title = "",tickangle = 90,showline = FALSE,tickfont = list(size = 20)),
+         yaxis = list(title = "",tickfont = list(size = 20), range = c(0,100)),
+         showlegend = FALSE,hovermode = "compare") %>%
+  add_annotations(
+    x=0.5,
+    y=1.05,
+    xref = "paper",
+    yref = "paper",
+    text = "Reception",
+    xanchor = "center",
+    yanchor = "bottom",
+    showarrow = F,
+    font = list(size=30, face="bold")
+  ) %>%
+  add_annotations(
+    x= ~ ifelse(Area == "BwD",1,ifelse(Area == "England",3,5))/6,
+    y= ~ PC/2,
+    xref = "paper",
+    yref = "y",
+    xanchor = 'center',yanchor = 'center',
+    text = ~ ifelse(catlabel == "Healthy Weight",paste0("<b>Healthy\nWeight\n",round(PC,1),"%</b>"),""),
+    showarrow = F,
+    font = list(size=14, face="bold", color = "white")
+  )
+
+year6 <- allData %>% filter(Age == "10-11 yrs")
+
+p2 <- plot_ly(year6) %>% 
+  add_trace(type = "bar", x = ~Area, y = ~PC, color = ~colshade, colors = pal,
+            text = ~ paste(catlabel,": ",round(PC,1),"%"),hoverinfo = "text") %>%  
+  layout(barmode = "stack",
+         xaxis = list(title = "",tickangle = 90,showline = FALSE,tickfont = list(size = 20)),
+         yaxis = list(title = "",tickfont = list(size = 20), range = c(0,100)),
+         showlegend = FALSE,hovermode = "compare") %>%
+  add_annotations(
+    x=0.5,
+    y=1.05,
+    xref = "paper",
+    yref = "paper",
+    text = "Year 6",
+    xanchor = "center",
+    yanchor = "bottom",
+    showarrow = F,
+    font = list(size=30, face="bold")
+  ) %>%
+  add_annotations(
+    x= ~ ifelse(Area == "BwD",1,ifelse(Area == "England",3,5))/6,
+    y= ~ PC/2,
+    xref = "paper",
+    yref = "y",
+    xanchor = 'center',yanchor = 'center',
+    text = ~ ifelse(catlabel == "Healthy Weight",paste0("<b>Healthy\nWeight\n",round(PC,1),"%</b>"),""),
+    showarrow = F,
+    font = list(size=14, face="bold", color = "white")
+  )
+
+p <- subplot(p1,p2,shareY = TRUE,shareX = FALSE) %>% layout(margin = m)
+p
 ```
 
 #### Underweight children
-One statistic which is significantly higher than average is the proportion of Year 6 children who are underweight. In both Reception (2.5%) and Year 6 (3.0%), Blackburn with Darwen has the third highest proportion of underweight children. It should be noted that nationally, pupils of Asian heritage are much more likely than average to be underweight.
-
-#### Severe obesity 
-For the first time, the 2016/17 survey tells us how many pupils are _severely_ obese, putting them at risk of serious acute and chronic health problems. Blackburn with Darwen had 58 Reception pupils in this category (2.59%), and 99 Year 6 pupils (4.8%). These proportions are slightly higher than average, but not significantly so.
+The only statistic which is significantly different from average - and in fact the highest in the country - is the proportion of Year 6 children who are _underweight_ (Blackburn with Darwen 3.0%, England 1.4%). However, in Reception, the local rate of 1.45 is is no longer significantly higher than the England average (1.4%). It should be noted that nationally, pupils of Asian heritage are much more likely than average to be underweight.
 
 #### Inequalities
-Figure \@ref(fig:NCMPmap) shows that there are marked spatial inequalities in ‘excess weight’ (i.e. ‘overweight’ upwards) across Blackburn with Darwen. Public Health England has also looked at obesity alone, for five years combined (2012/13-2016/17), to see how it varies with deprivation. They found a strong relationship within most local authorities, including Blackburn with Darwen, with obesity tending to be highest in the most deprived quintile and lowest in the least deprived _[@PHE_NCMP]_.
+Figure \@ref(fig:NCMPmap) shows that there are marked spatial inequalities in ‘excess weight’ (i.e. ‘overweight’ upwards) across Blackburn with Darwen:
 
-```{r NCMPmap, fig.cap='Prevalence of Excess Weight, 2014/15 - 2016/17', echo = FALSE, out.width = '70%', fig.align='center'}
-knitr::include_graphics("Assets/p20fig42.png")
+```{r echo = FALSE, warning = FALSE, message = FALSE,results = 'hide'}
+# Pull off latest Reception and Year 6 data for Excess Weight (3-year averages)
+MSOAData <- fingertips_data(IndicatorID = c(93106, 93108),AreaCode = c("E02002615","E02002616","E02002617","E02002618","E02002619","E02002620","E02002621","E02002622","E02002623","E02002624","E02002625","E02002626","E02002627","E02002628","E02002629","E02002630","E02002631","E02002632"),
+                            AreaTypeID = 3,categorytype = TRUE) %>% 
+  filter(is.na(CategoryType),Sex == "Persons",TimeperiodSortable == max(TimeperiodSortable))
+
+latestDate <- unique(MSOAData$Timeperiod)
+lowest <- min(MSOAData$Value)
+highest <- max(MSOAData$Value)
+
+reception <- MSOAData %>% filter(Age == "4-5 yrs")
+year6 <- MSOAData %>% filter(Age == "10-11 yrs")
+
+MSOAs <- st_read("F:/R Programming/Misc work/MSOA DFLE and HLE/MSOA Blackburn_region.shp")
+MSOAreception <- MSOAs %>% left_join(reception, by = c("MSOA_CODE" = "AreaCode"))
+MSOAyear6 <- MSOAs %>% left_join(year6, by = c("MSOA_CODE" = "AreaCode"))
+MSOAall <- MSOAs %>% left_join(MSOAData,by = c("MSOA_CODE" = "AreaCode"))
 ```
+
+```{r NCMPmap, fig.cap='_(interactive)_ Prevalence of Excess Weight, 2015/16 - 2017/18', echo = FALSE, out.width = '100%', fig.align='center'}
+#knitr::include_graphics("Assets/p20fig42.png")
+#### Excess Weight
+
+# Trying plotly with a discrete scale. (Couldn't persuade it to use the SAME scale for both maps if continuous)
+# NB - still no legend - couldn't fathom out how to display the sort of legend we would want. Using annotation as a workaround.
+
+m <- list(
+  l = 40,
+  r = 150,
+  b = 40,
+  t = 80,
+  pad = 4
+)
+
+mylabels <- c("10%-15%","15%-20%","20%-25%","25%-30%","30%-35%","35%-40%")
+MSOAreception$shadecat <- cut(MSOAreception$Value,breaks=c(10,15,20,25,30,35,40),labels = mylabels)
+MSOAyear6$shadecat <- cut(MSOAyear6$Value,breaks=c(10,15,20,25,30,35,40),labels = mylabels)
+
+p1 <- plot_ly(MSOAreception,split = ~MSOA_CODE,
+              line = list(width = 1, color = "lightgray"),
+              color = ~shadecat,colors = "YlGnBu",alpha = 1,
+              hoveron = "fills",hoverinfo="text",type = "scatter",mode = "lines",
+              text = ~paste("MSOA: ",MSOA_CODE,"\nChildren (3yrs combined): <b>",Count,"</b>\nExcess weight: <b>",round(Value,1),"%</b>")) %>%
+  #colorbar(title= "Excess Weight",tickfont = list(size = 18),titlefont = list(size = 20),ticksuffix = "%",
+  #         lenmode = "fraction",len = 0.8) %>%
+  hide_legend() %>%
+  layout(margin = m) %>%
+  add_annotations(
+    x=0.5,
+    y=1.0,
+    xref = "paper",
+    yref = "paper",
+    text = "Reception",
+    xanchor = "center",
+    yanchor = "bottom",
+    showarrow = F,
+    font = list(size=30, face="bold")
+  ) 
+
+p2 <- plot_ly(MSOAyear6,split = ~MSOA_CODE,
+              line = list(width = 1, color = "lightgray"),
+              color = ~shadecat,colors = "YlGnBu",alpha = 1,
+              hoveron = "fills",hoverinfo="text",type = "scatter",mode = "lines",
+              text = ~paste("MSOA: ",MSOA_CODE,"\nChildren (3yrs combined): <b>",Count,"</b>\nExcess weight: <b>",round(Value,1),"%</b>")) %>%
+  hide_legend() %>%
+  layout(margin = m) %>%
+  add_annotations(
+    x=0.5,
+    y=1.0,
+    xref = "paper",
+    yref = "paper",
+    text = "Year 6",
+    xanchor = "center",
+    yanchor = "bottom",
+    showarrow = F,
+    font = list(size=30, face="bold")
+  ) %>%
+  add_annotations(
+    x=0.8,y=1,
+    xref = "paper",yref = "paper",
+    text = paste0(sprintf("<span style = 'color: #253494;text-shadow: 2px 2px 0px #bdbdbd'><b>%s</b></span>","35%-40%"),"\n",
+                  sprintf("<span style = 'color: #2c7fb8;text-shadow: 2px 2px 0px #bdbdbd'><b>%s</b></span>","30%-35%"),"\n",
+                  sprintf("<span style = 'color: #41b6c4;text-shadow: 2px 2px 0px #bdbdbd'><b>%s</b></span>","25%-30%"),"\n",
+                  sprintf("<span style = 'color: #7fcdbb;text-shadow: 2px 2px 0px #bdbdbd'><b>%s</b></span>","20%-25%"),"\n",
+                  sprintf("<span style = 'color: #c7e9b4;text-shadow: 2px 2px 0px #bdbdbd'><b>%s</b></span>","15%-20%"),"\n",
+                  sprintf("<span style = 'color: #ffffcc;text-shadow: 2px 2px 0px #bdbdbd'><b>%s</b></span>","10%-15%")),
+    xanchor = "left",
+    yanchor = "top",
+    showarrow = F,
+    font = list(size = 25, face = "bold")
+  )
+
+p <- subplot(p1,p2,shareY = TRUE,shareX = FALSE) %>% 
+  layout(margin = m)
+p
+
+```
+
+Public Health England has also looked at obesity alone, for five years combined (2013/14-2017/18), to see how it varies with deprivation. In most local authorities, including Blackburn with Darwen, they found a strong tendency for obesity to be highest in the most deprived quintile and lowest in the least deprived _[@PHE_NCMP]_.
 
 ### Children's Oral Health
 #### Dental health of 5-year olds
@@ -159,33 +365,33 @@ One encouraging statistic is that 68.1% of Blackburn with Darwen children saw an
 ## Road Accidents
 ### Children Killed or \
 Seriously Injured (KSI)
-According to police figures, 48 children aged 0-15 were killed or seriously injured (KSI) on Blackburn with Darwen’s roads in the three years from 2014 to 2016 (see Figure \@ref(fig:KSImap) for locations). This total included the first child fatality on Blackburn with Darwen’s roads since 2006. The borough now has the highest crude child KSI rate of any upper-tier authority in England _[@PHE_childhealth]_. This is despite the fact that in 2016, many other police forces (_not_ including Lancashire) introduced new reporting systems which more readily classify injuries as ‘serious’ _[@DfT_roadcas]_. 
+According to police figures, 43 children aged 0-15 were killed or seriously injured (KSI) on Blackburn with Darwen’s roads in the three years from 2015 to 2017 (see Figure \@ref(fig:KSImap) for locations). This total included one child fatality in 2016, the first since 2006. The borough now has the highest crude child KSI rate of any upper-tier local authority in England _[@PHE_childhealth]_. This is despite the fact that in 2016, many other police forces (_not_ including Lancashire) introduced new reporting systems which more readily classify injuries as ‘serious’ _[@DfT_roadcas]_. 
 
-(ref:KSImapcap) Children (0-15) Killed or Seriously Injured (KSI)<br/>in Blackburn with Darwen 2014-16<br/><em>(showing ward boundaries)</em>
+(ref:KSImapcap) Children (0-15) Killed or Seriously Injured (KSI)<br/>in Blackburn with Darwen 2015-17<br/><em>(showing ward boundaries)</em>
 
 ```{r KSImap, fig.cap='(ref:KSImapcap)', echo=FALSE,out.width='60%', fig.align='center'}
 knitr::include_graphics("Assets/p21fig44.png")
 ```
 
-Figure \@ref(fig:KSImosaic) looks at all young people killed or seriously injured up to the age of 25, over a five-year period (2012-16). The casualties are broken down by type of road user (columns) as well as by age (light to dark shading). There were two fatalities: a child pedestrian, and a motor-cyclist aged 21-25. All the other casualties were serious injuries. Approximately half were pedestrians, of whom almost half were aged under 11 _[@DfT_Stats19]_. 
+Figure \@ref(fig:KSImosaic) looks at all young people killed or seriously injured up to the age of 25, over a five-year period (2013-17). The casualties are broken down by type of road user (columns) as well as by age (light to dark shading). There were three fatalities: a child pedestrian, and a motor-cyclist and a car occupant both aged 21-25. All the other casualties were serious injuries. Over 40% were pedestrians, of whom almost half were under 11 _[@DfT_Stats19]_. 
 
-(ref:KSImosaiccap) Breakdown of 153 KSI casualties aged 0-25<br/>by age & road-user type (BwD, 2012-16)
+(ref:KSImosaiccap) Breakdown of 162 KSI casualties aged 0-25<br/>by age & road-user type (BwD, 2013-17)
 
 ```{r KSImosaic, fig.cap='(ref:KSImosaiccap)', echo=FALSE,out.width='60%', fig.align='center'}
 knitr::include_graphics("Assets/p21fig45.png")
 ```
 
 #### Pedestrian Child KSI
-The borough’s rate of pedestrian KSI casualties among children and young people is well above the national average (Figure \@ref(fig:pedKSIchart)), particularly at the youngest ages _[@DfT_Stats19]_. For the 0-25 age-group as a whole, it is second only to the (unusually small) City of London _[@Pedsafe]_.
+The borough’s rate of pedestrian KSI casualties among children and young people is well above the national average (Figure \@ref(fig:pedKSIchart)), particularly under the age of 16 _[@DfT_Stats19]_. In 2012/13-16/17, it also had the highest rate of emergency admissions for pedestrian casualties aged 0-24 _[@PHE_childhealth]_.
 
-(ref:pedKSIcap) Pedestrian KSI rate per 100,000 children/young people<br/>(BwD v. England, 2012-16)</br><em>showing 95% confidence intervals</em>
+(ref:pedKSIcap) Pedestrian KSI rate per 100,000 children/young people<br/>(BwD v. England, 2013-17)</br><em>showing 95% confidence intervals</em>
 
 ```{r pedKSIchart, fig.cap='(ref:pedKSIcap)', echo=FALSE,out.width='60%', fig.align='center'}
 knitr::include_graphics("Assets/p21fig46.png")
 ```
 
 ### All Child Road Casualties
-If we broaden our scope to include all recorded child casualties on the road, whether serious or not, Blackburn with Darwen still compares badly. When we add up the total number of casualties aged 0-15 during the years 2012 to 2016, and express it as a crude rate (relative to the 0-15 year-old resident population), the borough ranks 4th highest out of 152 upper-tier authorities in England _[@DfT_casualties]_. 
+If we broaden our scope to include *all* recorded child casualties on the road, whether serious or not, Blackburn with Darwen still compares badly. When we add up the total number of casualties aged 0-15 during the years 2013 to 2017, and express it as a crude rate (relative to the 0-15 year-old resident population), the borough ranks 4th highest out of 152 upper-tier authorities in England _[@DfT_casualties]_. 
 
 ## Child Health Outcomes
 Figure \@ref(fig:childchart) shows how Blackburn with Darwen compares with England at various ages, on a cross-section of key outcomes _[@PHE_childhealth]_:

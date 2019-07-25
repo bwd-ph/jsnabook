@@ -5,7 +5,7 @@ bookdown::gitbook:
     toc:
       collapse: subsection
       before: |
-        <li><a href="./"><strong>JSNA Summary Review 2018</strong> <br/><em>(last updated 14th May 2019)</em></a></li>
+        <li><a href="./"><strong>JSNA Summary Review 2018</strong><br/><em>(last updated 25th July 2019)</em><br/>NB - Best viewed in Chrome</a></li>
       after: |
         <li><a href="https://github.com/rstudio/bookdown" target="blank">Published with bookdown</a></li>
     edit: https://github.com/rstudio/bookdown-demo/edit/master/%s

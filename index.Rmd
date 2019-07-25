@@ -3,6 +3,8 @@ site: bookdown::bookdown_site
 output: bookdown::gitbook
 documentclass: book
 bibliography: [book.bib, packages.bib]
+csl: university-of-york-vancouver.csl
+# inclusion of 'csl' file based on guidance at https://rmarkdown.rstudio.com/authoring_bibliographies_and_citations.html
 biblio-style: apalike
 cover-image: Assets/frontlogo.png
 link-citations: yes
@@ -31,6 +33,9 @@ library(tidyr)
 library(readxl)
 library(fingertipsR)
 library(toOrdinal)
+library(forcats)
+library(sf)
+library(RColorBrewer)
 # automatically create a bib database for R packages
 knitr::write_bib(c(
   .packages(), 'bookdown', 'knitr', 'rmarkdown'
